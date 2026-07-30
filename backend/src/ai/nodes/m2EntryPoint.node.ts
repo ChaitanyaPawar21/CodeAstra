@@ -1,5 +1,5 @@
 import { EnrichedParsedRepo } from "../../services/ai.service.js";
-import { geminiModel } from "../model.js";
+import { M2Model } from "../model.js";
 import {
   buildM2UserPrompt,
   M2_System_Prompt,
@@ -21,7 +21,7 @@ const ENTRY_CANDIDATES = [
   "Main.java",
 ];
 
-const m2LLM = geminiModel.withStructuredOutput(M2Outputschema);
+const m2LLM = M2Model.withStructuredOutput(M2Outputschema);
 
 export const m2EntryPointNode = async (
   state: GraphStateType,

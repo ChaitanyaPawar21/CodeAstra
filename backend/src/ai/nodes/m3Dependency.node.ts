@@ -1,4 +1,4 @@
-import { geminiModel } from "../model.js";
+import { M3Model } from "../model.js";
 import { GraphStateType } from "../state.js";
 import {
   M3OutputSchema,
@@ -8,7 +8,7 @@ import {
 
 const MAX_FILES_FOR_LLM = 40; // Token limit safeguard
 
-const m3LLM = geminiModel.withStructuredOutput(M3OutputSchema);
+const m3LLM = M3Model.withStructuredOutput(M3OutputSchema);
 
 export const m3DependencyNode = async (
   state: GraphStateType,
