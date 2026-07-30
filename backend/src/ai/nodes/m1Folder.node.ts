@@ -1,5 +1,5 @@
 import { boolean } from "zod";
-import { geminiModel } from "../model.js";
+import { M1Model } from "../model.js";
 import {
   buildM1UserPrompt,
   M1_System_Prompt,
@@ -7,7 +7,7 @@ import {
 } from "../prompts/m1Prompt.js";
 import { GraphStateType } from "../state.js";
 
-const m1LLM = geminiModel.withStructuredOutput(M1OutputSchema);
+const m1LLM = M1Model.withStructuredOutput(M1OutputSchema);
 
 export const M1FolderNode = async (
   state: GraphStateType,

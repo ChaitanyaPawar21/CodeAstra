@@ -4,20 +4,12 @@ import { z } from "zod";
 export const M3OutputSchema = z.object({
   graph: z.array(
     z.object({
-      file: z.string().describe("File path relative to repo root"),
-      imports: z
-        .array(z.string())
-        .describe("Files or modules this file imports"),
-      importedBy: z
-        .array(z.string())
-        .describe("Files that import this file"),
+      file: z.string().min(1).describe("File path — REQUIRED, never omit"),
+      imports: z.array(z.string()),
+      importedBy: z.array(z.string()),
     }),
   ),
-  formattedAscii: z
-    .string()
-    .describe(
-      "ASCII tree showing the most important dependency chain. e.g. auth.routes.ts → auth.controller.ts → user.service.ts → user.model.ts",
-    ),
+  formattedAscii: z.string(),
 });
 
 export type M3Output = z.infer<typeof M3OutputSchema>;
@@ -27,17 +19,17 @@ export const M3_SYSTEM_PROMPT = `You are an expert software architect performing
 Your task is to map how files import each other and identify the critical dependency chains.
 
 RULES:
+- Every node in the graph array MUST include the "file" field — this is required, never omit it
 - Only include internal project files — ignore node_modules, external packages
-- Resolve relative import paths to actual file paths where possible  
+- Resolve relative import paths to actual file paths where possible
 - importedBy is the reverse of imports — if A imports B, then B.importedBy includes A
-- formattedAscii must show the most important chain (e.g. routes → controller → service → model)
-- Keep formattedAscii focused on the dominant architectural pattern
+- formattedAscii must show the most important chain
+- If no dependencies found, still return each file with its path in the "file" field
 
 ASCII FORMAT EXAMPLE:
-auth.routes.ts
-└── auth.controller.ts
-    └── user.service.ts
-        └── user.model.ts`;
+index.js
+└── lib/express.js
+    └── lib/application.js`;
 
 /** User prompt builder */
 export const buildM3UserPrompt = (

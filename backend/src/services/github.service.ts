@@ -17,9 +17,8 @@ export interface TreeNode {
 }
 
 export interface FileContent {
-  // type: "file" | "dir";
+  path: string; // ← was missing
   content: string;
-  path: string;
 }
 
 const Skip_Dirs = new Set([
@@ -68,7 +67,6 @@ const octokit = new Octokit({
 /**
  * Extract owner and repo name from a GitHub URL
  */
-
 export const parseRepoUrl = (url: string): RepoMeta => {
   if (!url) {
     throw new Error("Repository Url is required");
@@ -178,30 +176,31 @@ export const getFileContent = async (
 
 export const getSourceFiles = async (
   meta: RepoMeta,
-  tree: TreeNode[],
+  tree: TreeNode[]
 ): Promise<FileContent[]> => {
-  const candidatePaths = tree.filter(
-    (n) => n.type === "blob" && isSourceFile(n.path!),
-  );
+
+  // Step 1: filter blobs → extract .path strings → cap at MAX_FILES
+  const candidatePaths: string[] = tree
+    .filter((n) => n.type === "blob" && isSourceFile(n.path))
+    .map((n) => n.path)        
+    .slice(0, MAX_FILES);
 
   const results: FileContent[] = [];
 
   for (let i = 0; i < candidatePaths.length; i += BATCH_SIZE) {
-    const batch = candidatePaths.slice(i, i + BATCH_SIZE);
+    const batch: string[] = candidatePaths.slice(i, i + BATCH_SIZE);
 
-    const batchPromises = batch.map(async (path) => {
-      try {
-        return await getFileContent(meta, path);
-      } catch (err: any) {
-        console.warn(
-          `[GitHub Service] Skipped reading '${path}':`,
-          err.message,
-        );
-        return null;
-      }
-    });
+    const batchResults = await Promise.all(
+      batch.map(async (filePath: string) => {  
+        try {
+          return await getFileContent(meta, filePath);
+        } catch (err: any) {
+          console.warn(`[GitHub Service] Skipped '${filePath}':`, err.message);
+          return null;
+        }
+      })
+    );
 
-    const batchResults = await Promise.all(batchPromises);
     batchResults.forEach((file) => {
       if (file) results.push(file);
     });
@@ -210,6 +209,7 @@ export const getSourceFiles = async (
       await sleep(RATE_DELAY_MS);
     }
   }
+
   return results;
 };
 
