@@ -40,9 +40,9 @@ app.listen(PORT, () => {
 
   return (
     <div className="h-full flex gap-5 overflow-hidden text-slate-300">
-      
+
       {/* File Tree Sidebar */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, x: -15 }}
         animate={{ opacity: 1, x: 0 }}
         className="w-[280px] bg-[#12141C] border border-white/[0.07] rounded-2xl flex flex-col h-full shrink-0 shadow-lg overflow-hidden"
@@ -53,22 +53,22 @@ app.listen(PORT, () => {
 
         <div className="p-3.5">
           <div className="relative flex items-center bg-[#090A0F] rounded-xl border border-white/[0.06]">
-             <Search className="w-4 h-4 text-slate-500 absolute left-3" />
-             <input 
-                type="text" 
-                placeholder="Search files..." 
-                className="w-full bg-transparent border-none text-slate-300 text-xs py-2.5 pl-9 pr-3 focus:outline-none focus:ring-0 placeholder-slate-500 font-mono"
-             />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3" />
+            <input
+              type="text"
+              placeholder="Search files..."
+              className="w-full bg-transparent border-none text-slate-300 text-xs py-2.5 pl-9 pr-3 focus:outline-none focus:ring-0 placeholder-slate-500 font-mono"
+            />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1 font-mono text-xs scrollbar-hide">
           <div className="flex items-center gap-2 px-2.5 py-2 text-slate-200 cursor-pointer bg-white/[0.04] rounded-xl border border-white/[0.06]">
-             <ChevronDown className="w-3.5 h-3.5" />
-             <span className="text-indigo-400">📂</span>
-             <span className="font-semibold text-slate-200">{cleanRepoName}</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+            <span className="text-indigo-400">📂</span>
+            <span className="font-semibold text-slate-200">{cleanRepoName}</span>
           </div>
-          
+
           {/* Dynamic Folders */}
           <div className="pl-4 space-y-1 mt-1">
             {analysisData.folderHierarchy.map((folder, i) => (
@@ -86,21 +86,21 @@ app.listen(PORT, () => {
 
         {/* Repository Links */}
         <div className="p-4 border-t border-white/[0.06] bg-[#090A0F]">
-           <div className="space-y-1">
-              <a href={repoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors">
-                 <FaGithub className="w-4 h-4 text-indigo-400" />
-                 <span className="truncate">{cleanRepoName}</span>
-              </a>
-              <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors">
-                 <GitPullRequest className="w-4 h-4" />
-                 Pull Requests <span className="ml-auto bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 py-0.5 px-2 rounded-full text-[10px]">3</span>
-              </a>
-           </div>
+          <div className="space-y-1">
+            <a href={repoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors">
+              <FaGithub className="w-4 h-4 text-indigo-400" />
+              <span className="truncate">{cleanRepoName}</span>
+            </a>
+            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors">
+              <GitPullRequest className="w-4 h-4" />
+              Pull Requests <span className="ml-auto bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 py-0.5 px-2 rounded-full text-[10px]">3</span>
+            </a>
+          </div>
         </div>
       </motion.div>
 
       {/* Code Editor Area */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
