@@ -1,4 +1,4 @@
-# 🚀 Antigravity IDE - Backend Analysis Engine
+# 🚀 CodeAstra - Backend Analysis Engine
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Express.js](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge)](https://expressjs.com/)
@@ -9,7 +9,7 @@
 
 > **AI-Powered Codebase Onboarding & Repository Analysis Engine.**
 
-Antigravity IDE is a high-performance backend platform that ingests public GitHub repositories and generates instant architectural insights using static parsing and a parallel LangGraph AI pipeline powered by Google Gemini (via `@langchain/google-genai`).
+CodeAstra is a high-performance backend platform that ingests public GitHub repositories and generates instant architectural insights using static parsing and a parallel LangGraph AI pipeline powered by Google Gemini (via `@langchain/google-genai`).
 
 ---
 
