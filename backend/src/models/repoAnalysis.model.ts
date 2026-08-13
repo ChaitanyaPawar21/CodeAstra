@@ -39,7 +39,7 @@ export interface IAnalysisResult {
 
 /**Document */
 export interface IRepoAnalysis extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId?: mongoose.Types.ObjectId | null;
   repoUrl: string;
   repoUrlHash: string;
   jobId: string;

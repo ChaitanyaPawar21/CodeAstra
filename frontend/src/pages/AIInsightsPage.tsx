@@ -1,66 +1,78 @@
 
 import { motion } from 'framer-motion';
-import { AlertTriangle, Lightbulb, Activity, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Lightbulb, Activity, ArrowRight, Sparkles } from 'lucide-react';
 import { mockRepoData } from '../data/mockDashboardData';
+import { useAnalysis } from '../context/AnalysisContext';
 
 export default function AIInsightsPage() {
+  const { analysisData } = useAnalysis();
+  const data = analysisData || mockRepoData;
+
   const containerVariants = {
     hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    show: { opacity: 1, transition: { staggerChildren: 0.05 } }
   };
   
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 15 },
     show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } }
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden text-gray-300">
+    <div className="h-full flex flex-col overflow-hidden text-slate-300">
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8 px-2"
+        className="mb-8"
       >
-        <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-          <Lightbulb className="w-8 h-8 text-yellow-400" />
-          AI Intelligence Center
-        </h1>
-        <p className="text-gray-400 mt-2">Deep architectural analysis and recommended optimizations</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">AI Intelligence Center</h1>
+            <p className="text-xs text-slate-400 font-mono mt-0.5">Automated architectural discovery & optimization roadmap ({data.summary.title})</p>
+          </div>
+        </div>
       </motion.div>
 
       <motion.div 
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="flex-1 overflow-y-auto pr-2 scrollbar-hide pb-10 space-y-6 px-2"
+        className="flex-1 overflow-y-auto pr-1 scrollbar-hide pb-10 space-y-6"
       >
-        <div className="grid grid-cols-2 gap-6">
-          {mockRepoData.aiInsights.map((insight, i) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {data.aiInsights.map((insight, i) => {
              const iconColors: Record<string, string> = {
-                blue: 'text-blue-400 bg-blue-500/15 border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.2)]',
-                red: 'text-red-400 bg-red-500/15 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.2)]',
-                purple: 'text-purple-400 bg-purple-500/15 border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.2)]',
-                cyan: 'text-cyan-400 bg-cyan-500/15 border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.2)]',
-                yellow: 'text-yellow-400 bg-yellow-500/15 border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.2)]'
+                blue: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+                red: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
+                purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+                cyan: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+                yellow: 'text-amber-400 bg-amber-500/10 border-amber-500/20'
              };
              
              return (
-               <motion.div variants={itemVariants} key={i} className="bg-[#1E2330]/80 backdrop-blur-xl border border-white/5 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer hover:bg-[#1E2330]">
-                 <div className="flex items-start gap-5">
-                   <div className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 ${iconColors[insight.colorTheme]}`}>
-                       {insight.iconType === 'module' && <Activity className="w-5 h-5" />}
-                       {insight.iconType === 'bottleneck' && <AlertTriangle className="w-5 h-5" />}
-                       {insight.iconType === 'risk' && <div className="text-xl font-bold">!</div>}
-                       {insight.iconType === 'suggestion' && <Lightbulb className="w-5 h-5" />}
-                       {insight.iconType === 'connection' && <ArrowRight className="w-5 h-5" />}
+               <motion.div 
+                 variants={itemVariants} 
+                 key={i} 
+                 className="bg-[#12141C] border border-white/[0.07] rounded-2xl p-6 shadow-lg hover:border-white/[0.15] transition-all duration-300 group cursor-pointer"
+               >
+                 <div className="flex items-start gap-4">
+                   <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${iconColors[insight.colorTheme] || iconColors.blue}`}>
+                       {insight.iconType === 'module' && <Activity className="w-4 h-4" />}
+                       {insight.iconType === 'bottleneck' && <AlertTriangle className="w-4 h-4" />}
+                       {insight.iconType === 'risk' && <div className="text-sm font-bold font-mono">!</div>}
+                       {insight.iconType === 'suggestion' && <Lightbulb className="w-4 h-4" />}
+                       {insight.iconType === 'connection' && <ArrowRight className="w-4 h-4" />}
                    </div>
-                   <div>
-                     <h3 className="text-lg font-semibold text-white mb-2">{insight.title}</h3>
-                     <p className="text-sm text-gray-400 leading-relaxed">{insight.description}</p>
+                   <div className="flex-1">
+                     <h3 className="text-base font-semibold text-white mb-1.5 group-hover:text-indigo-300 transition-colors">{insight.title}</h3>
+                     <p className="text-xs text-slate-400 leading-relaxed">{insight.description}</p>
                      
-                     <div className="mt-5 pt-4 border-t border-white/5 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                       <span className="text-xs text-blue-400 font-medium">View detailed analysis</span>
-                       <ArrowRight className="w-4 h-4 text-blue-400" />
+                     <div className="mt-4 pt-3 border-t border-white/[0.05] flex items-center justify-between opacity-80 group-hover:opacity-100 transition-opacity">
+                       <span className="text-xs font-mono text-indigo-400 font-medium">Explore recommendation</span>
+                       <ArrowRight className="w-3.5 h-3.5 text-indigo-400 group-hover:translate-x-1 transition-transform" />
                      </div>
                    </div>
                  </div>
@@ -72,3 +84,4 @@ export default function AIInsightsPage() {
     </div>
   );
 }
+

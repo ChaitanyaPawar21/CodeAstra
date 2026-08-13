@@ -48,7 +48,7 @@ export const analyzeRepo = async (req: Request, res: Response) => {
     return;
   }
 
-  const id = (record._id as string).toString();
+  const id = (record._id as unknown as string).toString();
 
   await analysisDAO.markActive(id);
 

@@ -13,21 +13,21 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="w-[80px] bg-[#181B26] border-r border-white/5 flex flex-col items-center py-6 h-full shrink-0 relative z-50">
+    <div className="w-[72px] bg-[#0D0E14] border-r border-white/[0.06] flex flex-col items-center py-5 h-full shrink-0 relative z-50">
       
-      {/* Logo Placeholder */}
-      <div className="w-11 h-11 bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-xl flex items-center justify-center font-bold text-lg mb-8 shadow-[0_0_20px_rgba(59,130,246,0.3)] shadow-blue-500/20 ring-1 ring-white/10">
+      {/* Brand Icon */}
+      <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold text-sm mb-6 shadow-md shadow-indigo-600/20 border border-indigo-400/30">
         CA
       </div>
 
-      <nav className="flex-1 w-full flex flex-col items-center gap-3">
+      <nav className="flex-1 w-full flex flex-col items-center gap-2">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `relative w-12 h-12 rounded-xl flex items-center justify-center group transition-colors duration-300 ${
-                isActive ? 'text-white bg-[#2A3143]/50' : 'text-gray-500 hover:text-gray-300 hover:bg-[#222631]'
+              `relative w-10 h-10 rounded-xl flex items-center justify-center group transition-colors duration-200 ${
+                isActive ? 'text-white bg-indigo-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
               }`
             }
           >
@@ -36,24 +36,24 @@ export default function Sidebar() {
                 {isActive && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-xl border border-white/10 shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+                    className="absolute inset-0 bg-indigo-500/10 rounded-xl border border-indigo-500/20"
                     initial={false}
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   />
                 )}
-                {/* Active Indicator Line */}
+                {/* Active Left Indicator Bar */}
                 {isActive && (
                   <motion.div
                     layoutId="activeIndicator"
-                    className="absolute -left-[16px] top-1/4 bottom-1/4 w-[3px] bg-blue-500 rounded-r-full shadow-[0_0_10px_rgba(59,130,246,0.8)]"
+                    className="absolute -left-[16px] top-2 bottom-2 w-[3px] bg-indigo-500 rounded-r-full shadow-sm"
                     initial={false}
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   />
                 )}
-                <item.icon className={`w-[22px] h-[22px] relative z-10 transition-colors duration-300 ${isActive ? 'text-blue-400' : ''}`} />
+                <item.icon className={`w-5 h-5 relative z-10 transition-colors duration-200 ${isActive ? 'text-indigo-400' : ''}`} />
                 
                 {/* Tooltip */}
-                <div className="absolute left-full ml-6 px-3 py-1.5 bg-[#2A3143] text-white text-[11px] font-medium rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50 shadow-xl border border-white/10 -translate-x-2 group-hover:translate-x-0">
+                <div className="absolute left-full ml-4 px-2.5 py-1 bg-[#1A1C28] text-slate-200 text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 whitespace-nowrap z-50 shadow-lg border border-white/10 -translate-x-1 group-hover:translate-x-0">
                   {item.name}
                 </div>
               </>
@@ -62,10 +62,10 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto pt-4 border-t border-white/5 w-full flex justify-center">
-        <button className="w-12 h-12 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-300 hover:bg-[#222631] transition-colors group relative">
-          <Settings className="w-[22px] h-[22px]" />
-          <div className="absolute left-full ml-6 px-3 py-1.5 bg-[#2A3143] text-white text-[11px] font-medium rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50 shadow-xl border border-white/10 -translate-x-2 group-hover:translate-x-0">
+      <div className="mt-auto pt-3 border-t border-white/[0.06] w-full flex justify-center">
+        <button className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-colors group relative">
+          <Settings className="w-5 h-5" />
+          <div className="absolute left-full ml-4 px-2.5 py-1 bg-[#1A1C28] text-slate-200 text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 whitespace-nowrap z-50 shadow-lg border border-white/10 -translate-x-1 group-hover:translate-x-0">
             Settings
           </div>
         </button>
@@ -73,3 +73,4 @@ export default function Sidebar() {
     </div>
   );
 }
+
