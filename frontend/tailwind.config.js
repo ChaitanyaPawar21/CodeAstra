@@ -8,19 +8,25 @@ export default {
     extend: {
       colors: {
         dark: {
-          900: '#0B0D17',
-          800: '#141824',
-          700: '#1C2132',
-          600: '#262D43',
+          950: '#08090D',
+          900: '#0D0E14',
+          850: '#11131B',
+          800: '#161824',
+          750: '#1B1E2E',
+          700: '#222638',
+          600: '#2C3147',
         },
         primary: {
           500: '#6366F1',
           600: '#4F46E5',
+          700: '#4338CA',
         },
         accent: {
+          indigo: '#6366F1',
           blue: '#3B82F6',
-          purple: '#8B5CF6',
-          pink: '#EC4899',
+          emerald: '#10B981',
+          amber: '#F59E0B',
+          rose: '#F43F5E',
         }
       },
       fontFamily: {
@@ -31,3 +37,4 @@ export default {
   },
   plugins: [],
 }
+

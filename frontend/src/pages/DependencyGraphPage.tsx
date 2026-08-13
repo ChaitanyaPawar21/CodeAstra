@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { 
   ReactFlow, 
   Background, 
@@ -18,19 +18,20 @@ import dagre from 'dagre';
 import { mockRepoData } from '../data/mockDashboardData';
 import { X, Search, GitMerge, FileCode, AlertTriangle, Activity } from 'lucide-react';
 import type { GraphNode as GraphNodeType } from '../types/dashboard';
+import { useAnalysis } from '../context/AnalysisContext';
 
 // --- Types & Config ---
 
 const colorMap: Record<string, string> = {
-  route: 'from-blue-600/40 to-blue-900/40 border-blue-500/50 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)]',
-  controller: 'from-purple-600/40 to-purple-900/40 border-purple-500/50 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.5)]',
-  service: 'from-green-600/40 to-green-900/40 border-green-500/50 text-green-300 shadow-[0_0_15px_rgba(34,197,94,0.5)]',
-  model: 'from-yellow-600/40 to-yellow-900/40 border-yellow-500/50 text-yellow-300 shadow-[0_0_15px_rgba(234,179,8,0.5)]',
-  middleware: 'from-cyan-600/40 to-cyan-900/40 border-cyan-500/50 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.5)]',
-  config: 'from-orange-600/40 to-orange-900/40 border-orange-500/50 text-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.5)]',
-  utility: 'from-pink-600/40 to-pink-900/40 border-pink-500/50 text-pink-300 shadow-[0_0_15px_rgba(236,72,153,0.5)]',
-  database: 'from-red-600/40 to-red-900/40 border-red-500/50 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.5)]',
-  api: 'from-indigo-600/40 to-indigo-900/40 border-indigo-500/50 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.5)]',
+  route: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300',
+  controller: 'bg-purple-500/10 border-purple-500/30 text-purple-300',
+  service: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
+  model: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+  middleware: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
+  config: 'bg-orange-500/10 border-orange-500/30 text-orange-300',
+  utility: 'bg-pink-500/10 border-pink-500/30 text-pink-300',
+  database: 'bg-rose-500/10 border-rose-500/30 text-rose-300',
+  api: 'bg-sky-500/10 border-sky-500/30 text-sky-300',
 };
 
 // --- Custom Nodes & Edges ---
@@ -41,14 +42,14 @@ const GlowNode = ({ data, selected }: { data: GraphNodeType & { isDimmed: boolea
 
   return (
     <motion.div 
-      initial={{ scale: 0.9, opacity: 0 }}
+      initial={{ scale: 0.95, opacity: 0 }}
       animate={{ scale: 1, opacity: data.isDimmed ? 0.3 : 1 }}
-      className={`relative rounded-xl border-2 px-5 py-3 backdrop-blur-xl transition-all duration-300 bg-gradient-to-br ${colorClass} ${opacity} ${selected ? 'ring-2 ring-white scale-110 z-50' : 'hover:scale-105'}`}
+      className={`relative rounded-xl border px-4 py-2.5 backdrop-blur-md transition-all duration-200 ${colorClass} ${opacity} ${selected ? 'ring-2 ring-indigo-400 scale-105 z-50' : 'hover:scale-102 cursor-pointer shadow-sm'}`}
     >
       <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-transparent !border-none" />
       
-      <div className="flex flex-col items-center gap-1 min-w-[120px]">
-        <span className="text-[9px] uppercase tracking-widest font-bold opacity-70">{data.type}</span>
+      <div className="flex flex-col items-center gap-0.5 min-w-[110px]">
+        <span className="text-[9px] uppercase tracking-widest font-mono font-bold opacity-60">{data.type}</span>
         <span className="text-xs font-mono font-medium">{data.label}</span>
       </div>
 
@@ -56,6 +57,7 @@ const GlowNode = ({ data, selected }: { data: GraphNodeType & { isDimmed: boolea
     </motion.div>
   );
 };
+
 
 const nodeTypes = { custom: GlowNode };
 
@@ -97,7 +99,8 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
 // --- Main Page Component ---
 
 export default function DependencyGraphPage() {
-  const rawData = mockRepoData.dependencyGraph;
+  const { analysisData } = useAnalysis();
+  const rawData = (analysisData || mockRepoData).dependencyGraph;
   
   // Transform mock data to React Flow format
   const initialNodes = useMemo(() => rawData.nodes.map(n => ({
