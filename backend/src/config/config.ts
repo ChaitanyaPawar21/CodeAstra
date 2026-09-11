@@ -22,10 +22,13 @@ if (!process.env.GITHUB_TOKEN) {
   throw new Error("GITHUB_TOKEN is not defined in environment variables");
 }
 
+if(!process.env.NVIDIA_API_KEY) {
+  throw new Error("NVIDIA_API_KEY is not defined in environment variables")
+}
+
 export const config = {
   PORT: process.env.PORT || 3000,
   MONGO_URI: process.env.MONGO_URI,
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
-  GROQ_API_KEY: process.env.GROQ_API_KEY || "",
-  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
-};
+  NVIDIA_API_KEY: process.env.NVIDIA_API_KEY || "",
+};

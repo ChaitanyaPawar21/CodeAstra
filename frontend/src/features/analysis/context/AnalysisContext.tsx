@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { DashboardData } from '../types/dashboard';
-import { mockRepoData } from '../data/mockDashboardData';
+import type { DashboardData } from '../../../shared/types/dashboard';
+import { mockRepoData } from '../../../shared/data/mockDashboardData';
 
 interface AnalysisContextType {
   repoUrl: string;
