@@ -1,15 +1,15 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import MainLayout from './layouts/MainLayout';
-import LandingPage from './pages/LandingPage';
-import LoadingPage from './pages/LoadingPage';
-import DashboardPage from './pages/DashboardPage';
-import CodeAnalysisPage from './pages/CodeAnalysisPage';
-import AIChatPage from './pages/AIChatPage';
-import ArchitecturePage from './pages/ArchitecturePage';
-import RepositoryStructurePage from './pages/RepositoryStructurePage';
-import AIInsightsPage from './pages/AIInsightsPage';
-import DependencyGraphPage from './pages/DependencyGraphPage';
-import { AnalysisProvider } from './context/AnalysisContext';
+import MainLayout from '../layouts/MainLayout';
+import LandingPage from '../pages/LandingPage';
+import LoadingPage from '../pages/LoadingPage';
+import DashboardPage from '../pages/DashboardPage';
+import CodeAnalysisPage from '../pages/CodeAnalysisPage';
+import AIChatPage from '../pages/AIChatPage';
+import ArchitecturePage from '../pages/ArchitecturePage';
+import RepositoryStructurePage from '../pages/RepositoryStructurePage';
+import AIInsightsPage from '../pages/AIInsightsPage';
+import DependencyGraphPage from '../pages/DependencyGraphPage';
+import { AnalysisProvider } from '../context/AnalysisContext';
 
 function App() {
   return (
