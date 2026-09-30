@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { MoreVertical, ChevronDown, Terminal, BookOpen, Layers, Zap, Code2, ArrowUpRight, Copy, CheckCircle2 } from 'lucide-react';
-import { mockRepoData } from '../data/mockDashboardData';
+import { mockRepoData } from '../../../shared/data/mockDashboardData';
 import { ReactFlow, Background, MarkerType, Position, Handle } from '@xyflow/react';
 import type { Edge, Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';

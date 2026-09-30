@@ -1,7 +1,7 @@
 
 import { motion } from 'framer-motion';
 import { AlertTriangle, Lightbulb, Activity, ArrowRight, Sparkles } from 'lucide-react';
-import { mockRepoData } from '../data/mockDashboardData';
+import { mockRepoData } from '../../../shared/data/mockDashboardData';
 import { useAnalysis } from '../context/AnalysisContext';
 
 export default function AIInsightsPage() {

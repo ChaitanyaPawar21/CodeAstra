@@ -15,9 +15,9 @@ import type { Connection, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import dagre from 'dagre';
-import { mockRepoData } from '../data/mockDashboardData';
+import { mockRepoData } from '../../../shared/data/mockDashboardData';
 import { X, Search, GitMerge, FileCode, AlertTriangle, Activity } from 'lucide-react';
-import type { GraphNode as GraphNodeType } from '../types/dashboard';
+import type { GraphNode as GraphNodeType } from '../../../shared/types/dashboard';
 import { useAnalysis } from '../context/AnalysisContext';
 
 // --- Types & Config ---
