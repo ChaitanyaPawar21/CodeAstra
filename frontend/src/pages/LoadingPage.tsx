@@ -10,17 +10,14 @@ export default function LoadingPage() {
   const navigate = useNavigate();
   const { repoUrl, analyzeRepo } = useAnalysis();
   const [stepIndex, setStepIndex] = useState(0);
-  const fetchedRef = useRef(false);
   const navigatedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
+    navigatedRef.current = false;
 
-    // Kick off analysis (sets quickFallback immediately, backend call races in background)
-    if (!fetchedRef.current) {
-      fetchedRef.current = true;
-      analyzeRepo(repoUrl);
-    }
+    // Always kick off a fresh analysis on every mount (supports re-analyze)
+    analyzeRepo(repoUrl);
 
     // Step through progress bar
     const stepsInterval = setInterval(() => {
@@ -44,7 +41,7 @@ export default function LoadingPage() {
       clearInterval(stepsInterval);
       clearTimeout(navTimer);
     };
-  }, []); // run once on mount
+  }, [repoUrl]); // re-run when repoUrl changes
 
   const cleanRepoName = repoUrl.replace('https://github.com/', '').replace(/\/$/, '') || 'target repo';
 

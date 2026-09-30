@@ -1,7 +1,26 @@
-import { Bell } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, RefreshCw } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { useAnalysis } from '../context/AnalysisContext';
 
 export default function Navbar() {
+  const navigate = useNavigate();
+  const { repoUrl, setRepoUrl } = useAnalysis();
+  const [inputUrl, setInputUrl] = useState(repoUrl);
+
+  // Keep input in sync if repoUrl changes externally (e.g. initial context load)
+  useEffect(() => {
+    setInputUrl(repoUrl);
+  }, [repoUrl]);
+
+  const handleReanalyze = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const url = inputUrl.trim() || repoUrl;
+    setRepoUrl(url);
+    navigate('/loading');
+  };
+
   return (
     <div className="h-16 bg-[#0D0E14]/90 backdrop-blur-md border-b border-white/[0.06] flex items-center justify-between px-6 sticky top-0 z-50">
       
@@ -24,19 +43,28 @@ export default function Navbar() {
 
       {/* Middle: URL Bar */}
       <div className="flex-1 flex justify-center max-w-xl">
-         <div className="w-full relative flex items-center bg-[#161824] rounded-lg border border-white/[0.08] p-1 transition-all focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/20">
-            <div className="pl-3 text-slate-400">
-               <FaGithub className="w-4 h-4" />
-            </div>
-            <input 
-               type="text" 
-               defaultValue="https://github.com/facebook/react" 
-               className="flex-1 bg-transparent border-none text-slate-200 px-3 py-1 text-xs focus:outline-none focus:ring-0 font-mono placeholder-slate-500"
-            />
-            <button className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-md font-medium transition-all shadow-sm">
-               Re-analyze
-            </button>
-         </div>
+        <form
+          onSubmit={handleReanalyze}
+          className="w-full relative flex items-center bg-[#161824] rounded-lg border border-white/[0.08] p-1 transition-all focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/20"
+        >
+          <div className="pl-3 text-slate-400">
+            <FaGithub className="w-4 h-4" />
+          </div>
+          <input
+            type="text"
+            value={inputUrl}
+            onChange={(e) => setInputUrl(e.target.value)}
+            placeholder="Paste GitHub repo URL..."
+            className="flex-1 bg-transparent border-none text-slate-200 px-3 py-1 text-xs focus:outline-none focus:ring-0 font-mono placeholder-slate-500"
+          />
+          <button
+            type="submit"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs rounded-md font-medium transition-all shadow-sm"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Re-analyze
+          </button>
+        </form>
       </div>
 
       {/* Right: Profile */}

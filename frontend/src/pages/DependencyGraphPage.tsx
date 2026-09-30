@@ -15,7 +15,7 @@ import type { Connection, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import dagre from 'dagre';
-import { mockRepoData } from '../data/mockDashboardData';
+import { mockRepoData } from '../data/mockDashboardData'; // REMOVED
 import { X, Search, GitMerge, FileCode, AlertTriangle, Activity } from 'lucide-react';
 import type { GraphNode as GraphNodeType } from '../types/dashboard';
 import { useAnalysis } from '../context/AnalysisContext';
@@ -100,7 +100,20 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
 
 export default function DependencyGraphPage() {
   const { analysisData } = useAnalysis();
-  const rawData = (analysisData || mockRepoData).dependencyGraph;
+
+  if (!analysisData?.dependencyGraph?.nodes?.length) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4">
+        <GitMerge className="w-12 h-12 text-indigo-500/40" />
+        <div className="text-center">
+          <p className="text-white font-semibold text-lg mb-1">No graph data yet</p>
+          <p className="text-sm text-slate-500">Run an analysis first to visualize the dependency graph</p>
+        </div>
+      </div>
+    );
+  }
+
+  const rawData = analysisData.dependencyGraph;
   
   // Transform mock data to React Flow format
   const initialNodes = useMemo(() => rawData.nodes.map(n => ({

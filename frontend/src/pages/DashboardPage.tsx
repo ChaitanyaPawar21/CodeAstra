@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { MoreVertical, ChevronDown, Terminal, BookOpen, Layers, Zap, Code2, ArrowUpRight, Copy, CheckCircle2 } from 'lucide-react';
-import { mockRepoData } from '../data/mockDashboardData';
+import { MoreVertical, ChevronDown, Terminal, BookOpen, Layers, Zap, Code2, ArrowUpRight, Copy, CheckCircle2, GitBranch } from 'lucide-react';
 import { ReactFlow, Background, MarkerType, Position, Handle } from '@xyflow/react';
 import type { Edge, Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -59,7 +58,20 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { analysisData } = useAnalysis();
-  const data = analysisData || mockRepoData;
+
+  if (!analysisData) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4">
+        <GitBranch className="w-12 h-12 text-indigo-500/40" />
+        <div className="text-center">
+          <p className="text-white font-semibold text-lg mb-1">No analysis yet</p>
+          <p className="text-sm text-slate-500">Paste a GitHub URL in the bar above and click <span className="text-indigo-400 font-mono">Re-analyze</span></p>
+        </div>
+      </div>
+    );
+  }
+
+  const data = analysisData;
 
   // React Flow configuration
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {

@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { DashboardData } from '../types/dashboard';
-import { mockRepoData } from '../data/mockDashboardData';
 
 interface AnalysisContextType {
   repoUrl: string;
   setRepoUrl: (url: string) => void;
-  analysisData: DashboardData;
+  analysisData: DashboardData | null;
   isLoading: boolean;
   error: string | null;
   analyzeRepo: (url: string) => Promise<DashboardData>;
@@ -183,7 +182,14 @@ function transformAnalysisResult(raw: any, targetUrl: string): DashboardData {
       { name: `${name}/config.ts`, importance: "Runtime configuration & environment settings", riskLevel: "Medium", colorTheme: "blue" },
       { name: `${name}/core.ts`, importance: "Primary business logic handler", riskLevel: "High", colorTheme: "purple" }
     ],
-    requestLifecycle: mockRepoData.requestLifecycle,
+    requestLifecycle: [
+      { label: 'Client Request', iconType: 'client' },
+      { label: 'API Route', iconType: 'code' },
+      { label: 'Controller', iconType: 'server' },
+      { label: 'Service', iconType: 'server' },
+      { label: 'Database Query', iconType: 'database' },
+      { label: 'Response', iconType: 'response' }
+    ],
     aiInsights: [
       {
         title: `Architectural Blueprint for ${capitalizedName}`,
@@ -213,7 +219,7 @@ function transformAnalysisResult(raw: any, targetUrl: string): DashboardData {
 
 export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [repoUrl, setRepoUrl] = useState<string>('https://github.com/facebook/react');
-  const [analysisData, setAnalysisData] = useState<DashboardData>(mockRepoData);
+  const [analysisData, setAnalysisData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
