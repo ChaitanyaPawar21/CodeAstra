@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import Navbar from '../components/Navbar';
+import Sidebar from './Sidebar';
+import Navbar from './Navbar';
 
 export default function MainLayout() {
   return (
@@ -15,4 +15,3 @@ export default function MainLayout() {
     </div>
   );
 }
-

@@ -1,14 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Code2, FolderTree, GitBranch, Sparkles, Terminal } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
 import { useAnalysis } from '../context/AnalysisContext';
+import axios from "axios"
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const { repoUrl, setRepoUrl } = useAnalysis();
   const [inputUrl, setInputUrl] = useState(repoUrl || '');
+
+  async function repoAnalysis() {
+    const response = await axios.post("http://localhost:4000/api/analysis", repoUrl)
+    console.log(response);
+    
+    return response.data;
+  }
+
+  useEffect(() => {
+    console.log(repoAnalysis());
+  }, []);
 
   const handleAnalyze = (e?: React.FormEvent) => {
     if (e) e.preventDefault();

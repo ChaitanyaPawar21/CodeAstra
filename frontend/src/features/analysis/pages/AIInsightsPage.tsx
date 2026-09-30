@@ -1,24 +1,12 @@
 
 import { motion } from 'framer-motion';
 import { AlertTriangle, Lightbulb, Activity, ArrowRight, Sparkles } from 'lucide-react';
+import { mockRepoData } from '../../../shared/data/mockDashboardData';
 import { useAnalysis } from '../context/AnalysisContext';
 
 export default function AIInsightsPage() {
   const { analysisData } = useAnalysis();
-
-  if (!analysisData) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4">
-        <Sparkles className="w-12 h-12 text-amber-500/40" />
-        <div className="text-center">
-          <p className="text-white font-semibold text-lg mb-1">No insights yet</p>
-          <p className="text-sm text-slate-500">Run an analysis first to see AI-generated insights</p>
-        </div>
-      </div>
-    );
-  }
-
-  const data = analysisData;
+  const data = analysisData || mockRepoData;
 
   const containerVariants = {
     hidden: { opacity: 0 },
