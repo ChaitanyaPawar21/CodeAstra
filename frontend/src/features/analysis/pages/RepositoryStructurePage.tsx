@@ -71,7 +71,7 @@ app.listen(PORT, () => {
 
           {/* Dynamic Folders */}
           <div className="pl-4 space-y-1 mt-1">
-            {analysisData.folderHierarchy.map((folder, i) => (
+            {analysisData!.folderHierarchy.map((folder, i) => (
               <div key={i} className="flex items-center justify-between px-2.5 py-1.5 text-slate-400 hover:bg-black/[0.04] rounded-xl cursor-pointer transition-colors">
                 <div className="flex items-center gap-2">
                   <ChevronRight className="w-3 h-3 text-slate-500" />
@@ -88,12 +88,12 @@ app.listen(PORT, () => {
         <div className="p-4 border-t border-black bg-[#FBF3C4]">
           <div className="space-y-1">
             <a href={repoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-[#000000] hover:bg-black/[0.04] transition-colors">
-              <FaGithub className="w-4 h-4 text-indigo-400" />
+              <FaGithub className="w-4 h-4 text-slate-400" />
               <span className="truncate">{cleanRepoName}</span>
             </a>
             <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-[#000000] hover:bg-black/[0.04] transition-colors">
               <GitPullRequest className="w-4 h-4" />
-              Pull Requests <span className="ml-auto bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 py-0.5 px-2 rounded-full text-[10px]">3</span>
+              Pull Requests <span className="ml-auto bg-indigo-500/10 text-black border border-indigo-500/20 py-0.5 px-2 rounded-full text-[10px]">3</span>
             </a>
           </div>
         </div>

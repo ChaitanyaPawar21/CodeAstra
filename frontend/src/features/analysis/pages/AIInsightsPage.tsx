@@ -1,12 +1,11 @@
 
 import { motion } from 'framer-motion';
 import { AlertTriangle, Lightbulb, Activity, ArrowRight, Sparkles } from 'lucide-react';
-import { mockRepoData } from '../../../shared/data/mockDashboardData';
 import { useAnalysis } from '../context/AnalysisContext';
 
 export default function AIInsightsPage() {
   const { analysisData } = useAnalysis();
-  const data = analysisData || mockRepoData;
+  const data = analysisData!;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -26,7 +25,7 @@ export default function AIInsightsPage() {
         className="mb-8"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-black flex items-center justify-center">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
@@ -45,11 +44,11 @@ export default function AIInsightsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {data.aiInsights.map((insight, i) => {
              const iconColors: Record<string, string> = {
-                blue: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
-                red: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
-                purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
-                cyan: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
-                yellow: 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                blue: 'text-black bg-indigo-500/10 border-indigo-500/20',
+                red: 'text-black bg-rose-500/10 border-rose-500/20',
+                purple: 'text-black bg-purple-500/10 border-purple-500/20',
+                cyan: 'text-black bg-cyan-500/10 border-cyan-500/20',
+                yellow: 'text-black bg-amber-500/10 border-amber-500/20'
              };
              
              return (

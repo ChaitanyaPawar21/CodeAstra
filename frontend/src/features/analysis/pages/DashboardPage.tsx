@@ -1,6 +1,5 @@
 import { FolderTree, Code2, GitBranch, Layers, Sparkles, MessageSquare, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockRepoData } from '../../../shared/data/mockDashboardData';
 import { useAnalysis } from '../context/AnalysisContext';
 
 const EXPLORE = [
@@ -20,7 +19,7 @@ const riskStyle = (level: string) =>
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { analysisData } = useAnalysis();
-  const data = analysisData || mockRepoData;
+  const data = analysisData!;
   const { summary, criticalFiles } = data;
 
   const stats = [

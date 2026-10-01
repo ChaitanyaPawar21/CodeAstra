@@ -22,7 +22,7 @@ const colorMap: Record<string, string> = {
   middleware: 'bg-cyan-200 border-cyan-600 text-cyan-900',
   config: 'bg-orange-200 border-orange-500 text-orange-900',
   util: 'bg-pink-200 border-pink-500 text-pink-900',
-  types: 'bg-slate-200 border-slate-500 text-slate-900',
+  types: 'bg-slate-800 border-slate-500 text-slate-100',
   'ui-page': 'bg-blue-200 border-blue-500 text-blue-900',
   'ui-component': 'bg-sky-200 border-sky-500 text-sky-900',
   state: 'bg-violet-200 border-violet-500 text-violet-900',
@@ -79,7 +79,7 @@ type View = 'layered' | 'file';
 
 export default function DependencyGraphPage() {
   const { analysisData } = useAnalysis();
-  const graph = analysisData.dependencyGraph;
+  const graph = analysisData!.dependencyGraph;
   const allNodes = (graph.nodes || []) as GNode[];
   const stats = graph.stats;
 
@@ -202,11 +202,6 @@ export default function DependencyGraphPage() {
   return (
     <div className="h-[calc(100vh-80px)] w-full flex flex-col gap-3">
       {/* Banners */}
-      {analysisData.isSample && (
-        <div className="shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs text-amber-200 font-medium">
-          Showing <b>sample data</b> — run an analysis from the landing page to see a real graph.
-        </div>
-      )}
       {stats?.truncated && (
         <div className="shrink-0 rounded-lg border border-orange-500/40 bg-orange-500/10 px-4 py-2 text-xs text-orange-200 flex items-center gap-2">
           <AlertTriangle className="w-3.5 h-3.5" /> Repository truncated: {stats.truncatedReason}
@@ -223,8 +218,8 @@ export default function DependencyGraphPage() {
         <div className="flex-1 flex flex-col min-w-0 rounded-xl border border-black bg-[#FBF3C4] overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 p-2 border-b border-black/20 bg-[#FFFBE0] text-xs">
             <div className="flex rounded-md border border-black overflow-hidden">
-              <button onClick={() => { setView('layered'); setSelectedId(null); }} className={`px-3 py-1 flex items-center gap-1 ${view === 'layered' ? 'bg-indigo-500 text-white' : 'text-black'}`}><Layers className="w-3 h-3" /> Layers</button>
-              <button onClick={() => { setView('file'); setSelectedId(null); }} className={`px-3 py-1 flex items-center gap-1 ${view === 'file' ? 'bg-indigo-500 text-white' : 'text-black'}`}><FileCode className="w-3 h-3" /> Files</button>
+              <button onClick={() => { setView('layered'); setSelectedId(null); }} className={`px-3 py-1 flex items-center gap-1 ${view === 'layered' ? 'bg-indigo-500 text-black' : 'text-black'}`}><Layers className="w-3 h-3" /> Layers</button>
+              <button onClick={() => { setView('file'); setSelectedId(null); }} className={`px-3 py-1 flex items-center gap-1 ${view === 'file' ? 'bg-indigo-500 text-black' : 'text-black'}`}><FileCode className="w-3 h-3" /> Files</button>
             </div>
             <span className="text-black/40">·</span>
             <div className="flex flex-wrap gap-1">

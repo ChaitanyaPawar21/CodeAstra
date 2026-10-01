@@ -7,7 +7,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 interface AnalysisContextType {
   repoUrl: string;
   setRepoUrl: (url: string) => void;
-  analysisData: DashboardData;
+  analysisData: DashboardData | null;
   isLoading: boolean;
   error: string | null;
   analyzeRepo: (url: string) => Promise<void>;
@@ -25,14 +25,14 @@ function parseGitHubUrl(url: string) {
 
 // language id -> display label + tailwind chip classes
 const LANG_META: Record<string, TechStack> = {
-  ts: { name: 'TypeScript', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-  tsx: { name: 'TypeScript (React)', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
-  js: { name: 'JavaScript', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
-  jsx: { name: 'JavaScript (React)', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
-  mjs: { name: 'JavaScript', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
-  cjs: { name: 'JavaScript', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
-  py: { name: 'Python', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-  java: { name: 'Java', color: 'text-rose-400 bg-rose-500/10 border-rose-500/20' },
+  ts: { name: 'TypeScript', color: 'text-black bg-indigo-500/10 border-indigo-500/20' },
+  tsx: { name: 'TypeScript (React)', color: 'text-black bg-blue-500/10 border-blue-500/20' },
+  js: { name: 'JavaScript', color: 'text-black bg-amber-500/10 border-amber-500/20' },
+  jsx: { name: 'JavaScript (React)', color: 'text-black bg-amber-500/10 border-amber-500/20' },
+  mjs: { name: 'JavaScript', color: 'text-black bg-amber-500/10 border-amber-500/20' },
+  cjs: { name: 'JavaScript', color: 'text-black bg-amber-500/10 border-amber-500/20' },
+  py: { name: 'Python', color: 'text-black bg-emerald-500/10 border-emerald-500/20' },
+  java: { name: 'Java', color: 'text-black bg-rose-500/10 border-rose-500/20' },
 };
 
 const runCmdFor = (lang: string) =>
@@ -200,7 +200,7 @@ function transformReal(raw: any, targetUrl: string): DashboardData {
 
 export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [repoUrl, setRepoUrl] = useState<string>('https://github.com/facebook/react');
-  const [analysisData, setAnalysisData] = useState<DashboardData>({ ...mockRepoData, isSample: true });
+  const [analysisData, setAnalysisData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 

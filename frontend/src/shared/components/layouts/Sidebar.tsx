@@ -67,7 +67,7 @@ export default function Sidebar() {
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                       />
                     )}
-                    <item.icon className={`w-[18px] h-[18px] relative z-10 shrink-0 ${isActive ? 'text-indigo-400' : ''}`} />
+                    <item.icon className={`w-[18px] h-[18px] relative z-10 shrink-0 ${isActive ? 'text-black' : ''}`} />
                     <span className="relative z-10 font-medium">{item.name}</span>
                   </>
                 )}

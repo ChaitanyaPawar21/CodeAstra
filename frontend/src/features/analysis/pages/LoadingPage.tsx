@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAnalysis } from '../context/AnalysisContext';
@@ -10,14 +10,9 @@ export default function LoadingPage() {
   const navigate = useNavigate();
   const { repoUrl, analyzeRepo } = useAnalysis();
   const [stepIndex, setStepIndex] = useState(0);
-  const navigatedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
-    navigatedRef.current = false;
-
-    // Always kick off a fresh analysis on every mount (supports re-analyze)
-    analyzeRepo(repoUrl);
 
     // Step through progress bar
     const stepsInterval = setInterval(() => {
@@ -27,19 +22,15 @@ export default function LoadingPage() {
       });
     }, STEP_DURATION);
 
-    // Navigate after all steps complete + short pause
-    const navDelay = STEP_DURATION * STEPS.length + 600;
-    const navTimer = setTimeout(() => {
-      if (isMounted && !navigatedRef.current) {
-        navigatedRef.current = true;
-        navigate('/dashboard');
-      }
-    }, navDelay);
+    // Navigate only once the analysis actually resolves (analyzeRepo never
+    // rejects — it stores failures in the error state), not on a blind timer.
+    analyzeRepo(repoUrl).then(() => {
+      if (isMounted) navigate('/dashboard');
+    });
 
     return () => {
       isMounted = false;
       clearInterval(stepsInterval);
-      clearTimeout(navTimer);
     };
   }, [repoUrl]); // re-run when repoUrl changes
 
@@ -55,7 +46,7 @@ export default function LoadingPage() {
             className="inline-block px-8 py-4 bg-[#FFFBE0] border border-indigo-500/30 rounded-2xl mb-8 shadow-xl"
           >
             <h2 className="text-2xl font-bold mb-1 text-[#000000]">Analyzing Repository...</h2>
-            <p className="text-xs text-indigo-400 font-mono">{cleanRepoName}</p>
+            <p className="text-xs text-slate-400 font-mono">{cleanRepoName}</p>
           </motion.div>
           
           <div className="flex justify-between relative mt-16 max-w-xl mx-auto">
@@ -83,13 +74,13 @@ export default function LoadingPage() {
             <span className="text-xs text-slate-400 ml-2 font-mono">Terminal Engine</span>
           </div>
           <div className="p-4 font-mono text-xs text-slate-400 h-44 overflow-y-auto space-y-1.5 bg-[#FBF3C4]">
-            <p><span className="text-indigo-400">[INFO]</span> Connecting to repository {cleanRepoName}...</p>
-            {stepIndex >= 1 && <p><span className="text-emerald-400">[SUCCESS]</span> Fetched tree hierarchy</p>}
-            {stepIndex >= 2 && <p><span className="text-indigo-400">[INFO]</span> Extracting package configuration and language stack...</p>}
-            {stepIndex >= 3 && <p><span className="text-indigo-400">[INFO]</span> Mapping component relationships & entry points...</p>}
-            {stepIndex >= 3 && <p className="text-emerald-400">[SUCCESS] Generated runtime dependency graph</p>}
-            {stepIndex >= 4 && <p className="text-emerald-400">[SUCCESS] AI insights ready — loading dashboard</p>}
-            {stepIndex < 4 && <p className="text-indigo-300 animate-pulse">_ Processing...</p>}
+            <p><span className="text-blue-600">[INFO]</span> Connecting to repository {cleanRepoName}...</p>
+            {stepIndex >= 1 && <p><span className="text-emerald-600">[SUCCESS]</span> Fetched tree hierarchy</p>}
+            {stepIndex >= 2 && <p><span className="text-blue-600">[INFO]</span> Extracting package configuration and language stack...</p>}
+            {stepIndex >= 3 && <p><span className="text-blue-600">[INFO]</span> Mapping component relationships & entry points...</p>}
+            {stepIndex >= 3 && <p className="text-emerald-600">[SUCCESS] Generated runtime dependency graph</p>}
+            {stepIndex >= 4 && <p className="text-emerald-600">[SUCCESS] AI insights ready — loading dashboard</p>}
+            {stepIndex < 4 && <p className="text-slate-500 animate-pulse">_ Processing...</p>}
           </div>
         </div>
       </div>
