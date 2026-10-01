@@ -2,7 +2,9 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { DashboardData, GraphNode, GraphEdge, TechStack } from '../../../shared/types/dashboard';
 import { mockRepoData } from '../../../shared/data/mockDashboardData';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Same-origin by default: on Vercel the `/api/*` rewrite routes to the backend
+// service. Set VITE_API_URL (e.g. http://localhost:5000) for bare `vite dev`.
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 interface AnalysisContextType {
   repoUrl: string;

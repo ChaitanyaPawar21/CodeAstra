@@ -6,6 +6,12 @@ connectDB();
 
 const PORT = config.PORT || 5000;
 
-app.listen(PORT, ()=>{
-    console.log(`Server is running on port http://localhost:${PORT}`);
-})
+// On Vercel the platform invokes the exported app as a function; locally we
+// start a long-running listener. VERCEL is set in all Vercel deployments.
+if (!process.env.VERCEL) {
+    app.listen(PORT, ()=>{
+        console.log(`Server is running on port http://localhost:${PORT}`);
+    })
+}
+
+export default app;
