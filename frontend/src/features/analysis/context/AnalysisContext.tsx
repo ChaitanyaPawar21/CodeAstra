@@ -12,7 +12,7 @@ interface AnalysisContextType {
   analysisData: DashboardData | null;
   isLoading: boolean;
   error: string | null;
-  analyzeRepo: (url: string) => Promise<void>;
+  analyzeRepo: (url: string) => Promise<boolean>;
 }
 
 const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined);
@@ -206,7 +206,7 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const analyzeRepo = useCallback(async (url: string): Promise<void> => {
+  const analyzeRepo = useCallback(async (url: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     setRepoUrl(url);
@@ -222,11 +222,13 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (!response.ok || !json?.success || !json?.data) {
         const msg = json?.message || json?.errors?.join(' | ') || `Request failed (${response.status})`;
         setError(msg);
-        return;
+        return false;
       }
       setAnalysisData(transformReal(json.data, url));
+      return true;
     } catch (err: any) {
       setError(err?.message || 'Could not reach the analysis backend.');
+      return false;
     } finally {
       setIsLoading(false);
     }

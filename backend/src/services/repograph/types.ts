@@ -1,6 +1,7 @@
 // Shared types for the deterministic repo-graph pipeline.
 
-export const ANALYSIS_VERSION = 2 as const;
+// v3: invalidates rows cached while the M1 model was EOL (missing m1/m2).
+export const ANALYSIS_VERSION = 3 as const;
 
 export type Layer =
   | "entry"

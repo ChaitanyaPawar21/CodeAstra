@@ -8,7 +8,8 @@ const STEP_DURATION = 600; // ms per step
 
 export default function LoadingPage() {
   const navigate = useNavigate();
-  const { repoUrl, analyzeRepo } = useAnalysis();
+  const { repoUrl, analyzeRepo, error } = useAnalysis();
+  const [failed, setFailed] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
@@ -24,8 +25,10 @@ export default function LoadingPage() {
 
     // Navigate only once the analysis actually resolves (analyzeRepo never
     // rejects — it stores failures in the error state), not on a blind timer.
-    analyzeRepo(repoUrl).then(() => {
-      if (isMounted) navigate('/dashboard');
+    analyzeRepo(repoUrl).then((ok) => {
+      if (!isMounted) return;
+      if (ok) navigate('/dashboard');
+      else setFailed(true);
     });
 
     return () => {
@@ -79,10 +82,23 @@ export default function LoadingPage() {
             {stepIndex >= 2 && <p><span className="text-blue-600">[INFO]</span> Extracting package configuration and language stack...</p>}
             {stepIndex >= 3 && <p><span className="text-blue-600">[INFO]</span> Mapping component relationships & entry points...</p>}
             {stepIndex >= 3 && <p className="text-emerald-600">[SUCCESS] Generated runtime dependency graph</p>}
-            {stepIndex >= 4 && <p className="text-emerald-600">[SUCCESS] AI insights ready — loading dashboard</p>}
-            {stepIndex < 4 && <p className="text-slate-500 animate-pulse">_ Processing...</p>}
+            {failed ? (
+              <p className="text-red-500 font-semibold">[ERROR] {error || 'Analysis failed.'}</p>
+            ) : (
+              <p className="text-slate-500 animate-pulse">_ Processing… large repos can take 1–2 minutes</p>
+            )}
           </div>
         </div>
+        {failed && (
+          <div className="text-center mt-6">
+            <button
+              onClick={() => navigate('/')}
+              className="px-4 py-2 rounded-lg bg-indigo-500 border-2 border-black shadow-md text-sm font-semibold"
+            >
+              Try another repo
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
