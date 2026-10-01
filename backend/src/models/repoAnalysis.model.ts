@@ -1,4 +1,10 @@
 import mongoose, { Schema, Document } from "mongoose";
+import type {
+  GraphFile,
+  GraphEdge,
+  LayerFlowEntry,
+  RepoGraphStats,
+} from "../services/repograph/types.js";
 
 /**
  * M1
@@ -29,11 +35,20 @@ export interface IDependencyNode {
 export interface IDependencyMap {
   formattedAscii?: string;
   graph: IDependencyNode[];
+  // v2 deterministic graph
+  version?: number;
+  tree?: Record<string, unknown>;
+  files?: Record<string, GraphFile>;
+  edges?: GraphEdge[];
+  cycles?: string[][];
+  orphans?: string[];
+  layerFlow?: LayerFlowEntry[];
+  stats?: RepoGraphStats;
 }
 
 export interface IAnalysisResult {
   m1: IFolderEntry[];
-  m2: IEntryPoint;
+  m2: IEntryPoint | null; // null when the LLM pass is unavailable
   m3: IDependencyMap;
 }
 
@@ -45,6 +60,7 @@ export interface IRepoAnalysis extends Document {
   jobId: string;
   status: "waiting" | "active" | "completed" | "failed";
   result: IAnalysisResult | null;
+  analysisVersion: number;
   error: string | null;
   createdAt: Date;
   completedAt: Date | null;
@@ -73,7 +89,7 @@ const EntryPointSchema = new Schema<IEntryPoint>(
   {
     file: {
       type: String,
-      required: true,
+      default: "",
     },
     executionFlow: [{ type: String }],
     description: {
@@ -91,6 +107,23 @@ const DependencyNodeSchema = new Schema<IDependencyNode>(
     },
     imports: [{ type: String }],
     importedBy: [{ type: String }],
+  },
+  { _id: false },
+);
+
+const DependencyMapSchema = new Schema<IDependencyMap>(
+  {
+    graph: [DependencyNodeSchema],
+    formattedAscii: { type: String, default: "" },
+    // v2 — Mixed keeps the schema flat; shape is enforced by the pipeline types.
+    version: { type: Number },
+    tree: { type: Schema.Types.Mixed },
+    files: { type: Schema.Types.Mixed },
+    edges: { type: Schema.Types.Mixed },
+    cycles: { type: Schema.Types.Mixed },
+    orphans: [{ type: String }],
+    layerFlow: { type: Schema.Types.Mixed },
+    stats: { type: Schema.Types.Mixed },
   },
   { _id: false },
 );
@@ -129,7 +162,12 @@ const repoAnalysischema = new Schema<IRepoAnalysis>(
     result: {
       m1: [FolderEntrySchema],
       m2: EntryPointSchema,
-      m3: [DependencyNodeSchema],
+      m3: DependencyMapSchema,
+    },
+    analysisVersion: {
+      type: Number,
+      default: 0,
+      index: true,
     },
     error: {
       type: String,

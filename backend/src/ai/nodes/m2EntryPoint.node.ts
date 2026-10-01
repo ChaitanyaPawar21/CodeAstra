@@ -1,4 +1,3 @@
-import { EnrichedParsedRepo } from "../../services/ai.service.js";
 import { M2Model } from "../model.js";
 import {
   buildM2UserPrompt,
@@ -28,10 +27,9 @@ export const m2EntryPointNode = async (
 ): Promise<Partial<GraphStateType>> => {
   try {
     const { files, sourcePaths } = state.parsedRepo;
-    const enrichedRepo = state.parsedRepo as EnrichedParsedRepo;
 
-    const candidates = enrichedRepo.entryCandidates?.length
-      ? enrichedRepo.entryCandidates
+    const candidates = state.entryCandidates?.length
+      ? state.entryCandidates
       : sourcePaths.filter((p) =>
           ENTRY_CANDIDATES.includes(p.split("/").pop()!),
         );
@@ -46,10 +44,10 @@ export const m2EntryPointNode = async (
         errors: ["\n[m2] No entry candidates found"],
       };
     }
-    const entryContents = enrichedRepo.entryContents?.length
-      ? enrichedRepo.entryContents
+    const entryContents = state.entryContents?.length
+      ? state.entryContents
       : (candidates
-          .map((path) => {
+          .map((path: string) => {
             const parsed = files.find((f) => f.filePath === path);
             return parsed
               ? { path, content: parsed.functions.join(", ") }

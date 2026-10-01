@@ -12,19 +12,19 @@ import type { Connection, Edge, Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 const initialNodes: Node[] = [
-  { id: '1', position: { x: 250, y: 50 }, data: { label: 'Client (Browser)' }, className: 'bg-dark-800 text-white border-primary-500 rounded-lg p-3 w-40 text-center shadow-lg' },
-  { id: '2', position: { x: 250, y: 150 }, data: { label: 'API Gateway (Routes)' }, className: 'bg-dark-800 text-white border-blue-500 rounded-lg p-3 w-40 text-center shadow-lg' },
-  { id: '3', position: { x: 100, y: 250 }, data: { label: 'Auth Service' }, className: 'bg-dark-800 text-white border-purple-500 rounded-lg p-3 w-40 text-center shadow-lg' },
-  { id: '4', position: { x: 400, y: 250 }, data: { label: 'User Service' }, className: 'bg-dark-800 text-white border-purple-500 rounded-lg p-3 w-40 text-center shadow-lg' },
-  { id: '5', position: { x: 250, y: 350 }, data: { label: 'Database (MongoDB)' }, className: 'bg-dark-800 text-white border-green-500 rounded-lg p-3 w-40 text-center shadow-lg' },
+  { id: '1', position: { x: 250, y: 50 }, data: { label: 'Client (Browser)' }, className: 'bg-dark-800 text-[#000000] border-primary-500 rounded-lg p-3 w-40 text-center shadow-lg' },
+  { id: '2', position: { x: 250, y: 150 }, data: { label: 'API Gateway (Routes)' }, className: 'bg-dark-800 text-[#000000] border-blue-500 rounded-lg p-3 w-40 text-center shadow-lg' },
+  { id: '3', position: { x: 100, y: 250 }, data: { label: 'Auth Service' }, className: 'bg-dark-800 text-[#000000] border-purple-500 rounded-lg p-3 w-40 text-center shadow-lg' },
+  { id: '4', position: { x: 400, y: 250 }, data: { label: 'User Service' }, className: 'bg-dark-800 text-[#000000] border-purple-500 rounded-lg p-3 w-40 text-center shadow-lg' },
+  { id: '5', position: { x: 250, y: 350 }, data: { label: 'Database (MongoDB)' }, className: 'bg-dark-800 text-[#000000] border-green-500 rounded-lg p-3 w-40 text-center shadow-lg' },
 ];
 
 const initialEdges: Edge[] = [
-  { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#6366F1' } },
-  { id: 'e2-3', source: '2', target: '3', animated: true, style: { stroke: '#3B82F6' } },
-  { id: 'e2-4', source: '2', target: '4', animated: true, style: { stroke: '#3B82F6' } },
-  { id: 'e3-5', source: '3', target: '5', animated: true, style: { stroke: '#8B5CF6' } },
-  { id: 'e4-5', source: '4', target: '5', animated: true, style: { stroke: '#8B5CF6' } },
+  { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#FBE16B' } },
+  { id: 'e2-3', source: '2', target: '3', animated: true, style: { stroke: '#E8BE28' } },
+  { id: 'e2-4', source: '2', target: '4', animated: true, style: { stroke: '#E8BE28' } },
+  { id: 'e3-5', source: '3', target: '5', animated: true, style: { stroke: '#E8BE28' } },
+  { id: 'e4-5', source: '4', target: '5', animated: true, style: { stroke: '#E8BE28' } },
 ];
 
 export default function ArchitecturePage() {
@@ -54,14 +54,14 @@ export default function ArchitecturePage() {
             <Controls className="bg-dark-800 fill-white text-black border-none shadow-xl" />
             <MiniMap 
                nodeStrokeColor={(n) => {
-                  if (n.className?.includes('primary')) return '#6366F1';
-                  return '#262D43';
+                  if (n.className?.includes('primary')) return '#FBE16B';
+                  return '#FDEFA8';
                }}
-               nodeColor="#141824"
+               nodeColor="#FFFBE0"
                maskColor="rgba(11, 13, 23, 0.7)"
-               className="bg-dark-800 rounded-lg border border-white/10"
+               className="bg-dark-800 rounded-lg border border-black"
             />
-            <Background color="#262D43" gap={16} size={1} />
+            <Background color="#FDEFA8" gap={16} size={1} />
           </ReactFlow>
        </div>
     </div>

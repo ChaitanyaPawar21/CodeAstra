@@ -44,11 +44,27 @@ export interface AIInsight {
   colorTheme: 'blue' | 'red' | 'purple' | 'yellow' | 'cyan';
 }
 
+// Layer set produced by the backend repograph pipeline.
+export type LayerType =
+  | 'entry' | 'route' | 'controller' | 'service' | 'repository' | 'model'
+  | 'middleware' | 'config' | 'util' | 'types' | 'ui-page' | 'ui-component'
+  | 'state' | 'api-client' | 'test' | 'other'
+  // legacy values kept for sample/mock data
+  | 'utility' | 'database' | 'api';
+
 export interface GraphNode {
   id: string;
-  label: string;
-  type: 'route' | 'controller' | 'service' | 'model' | 'middleware' | 'config' | 'utility' | 'database' | 'api';
-  color: string;
+  label: string; // file path
+  type: LayerType; // layer
+  color?: string; // legacy (sample data)
+  language?: string;
+  layerReason?: string;
+  loc?: number;
+  exports?: string[];
+  externalPackages?: string[];
+  imports?: string[]; // node ids
+  importedBy?: string[]; // node ids
+  // legacy per-node metadata, only present in sample data
   metadata?: {
     dependencies: string[];
     importedBy: string[];
@@ -64,6 +80,24 @@ export interface GraphEdge {
   target: string;
   animated?: boolean;
   label?: string;
+  typeOnly?: boolean;
+  cyclic?: boolean;
+}
+
+export interface LayerFlowEntry {
+  from: string;
+  to: string;
+  count: number;
+}
+
+export interface GraphStats {
+  files: number;
+  parsed: number;
+  edges: number;
+  unresolved: number;
+  truncated: boolean;
+  truncatedReason: string | null;
+  unsupportedLanguages: string[];
 }
 
 export interface QuickSetupGuide {
@@ -83,6 +117,7 @@ export interface RepositoryOverview {
 
 export interface DashboardData {
   repoUrl: string;
+  isSample?: boolean; // true when no real analysis ran (mock/sample data)
   summary: SummaryData;
   repositoryOverview: RepositoryOverview;
   quickSetupGuide: QuickSetupGuide;
@@ -94,5 +129,9 @@ export interface DashboardData {
   dependencyGraph: {
     nodes: GraphNode[];
     edges: GraphEdge[];
+    cycles?: string[][];
+    orphans?: string[];
+    layerFlow?: LayerFlowEntry[];
+    stats?: GraphStats;
   };
 }

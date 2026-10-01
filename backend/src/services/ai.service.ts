@@ -1,15 +1,16 @@
-import { GraphRunResult, runAnalysisGraph } from "../ai/analysis.graph.js";
-import { IAnalysisResult } from "../models/repoAnalysis.model.js";
+import { runAnalysisGraph } from "../ai/analysis.graph.js";
+import { IAnalysisResult, IDependencyMap } from "../models/repoAnalysis.model.js";
 import {
   detectEntryCandidates,
   getFileContent,
   getRepoTree,
-  getSourceFiles,
   parseRepoUrl,
   RepoMeta,
   TreeNode,
 } from "./github.service.js";
-import { ParsedRepo, parseRepo } from "./parser.service.js";
+import { parseRepo } from "./parser.service.js";
+import { fetchRepoFiles } from "./repograph/fetch.js";
+import { buildRepoGraph, legacyM3 } from "./repograph/index.js";
 
 export interface AIServiceResult {
   result: IAnalysisResult | null;
@@ -17,132 +18,113 @@ export interface AIServiceResult {
   success: boolean;
 }
 
-export interface EnrichedParsedRepo extends ParsedRepo {
-  entryCandidates?: string[];
-  entryContents: Array<{ path: string; content: string }>;
-}
+// Source files we feed to the LLM (m1/m2 context) — token-capped subset.
+const LLM_SOURCE_EXT = new Set([".js", ".jsx", ".ts", ".tsx", ".py", ".java"]);
+const MAX_LLM_FILES = 60;
 
-/** build m2 context - fetch actual content of entry candidates => token usage low */
-const resolveEntryContents = async (
-  meta: RepoMeta,
-  candidates: string[],
-): Promise<Array<{ path: string; content: string }>> => {
-  const results: Array<{ path: string; content: string }> = [];
-
-  for (const path of candidates.slice(0, 3)) {
-    try {
-      const file = await getFileContent(meta, path);
-      results.push({ path: file.path, content: file.content });
-    } catch {
-      console.warn(
-        `[AI Service] Could not fetch entry file content for: ${path}`,
-      );
-    }
-  }
-
-  return results;
+const extname = (p: string) => {
+  const i = p.lastIndexOf(".");
+  return i === -1 ? "" : p.slice(i).toLowerCase();
 };
 
-/**Main Orchestrator
- * full pipeline:- repoUrl → GitHub fetch → Parse AST/Regex → M2 Context Fetch → LangGraph → IAnalysisResult
+/**
+ * Orchestrator: fetch the repo once (tarball), build the deterministic
+ * dependency graph, and run the LangGraph LLM pass (m1/m2) in parallel.
+ * The graph (m3) is always real; m1/m2 are marked unavailable if the LLM fails.
  */
 const analyseRepository = async (repoUrl: string): Promise<AIServiceResult> => {
   let meta: RepoMeta;
-
   try {
     meta = parseRepoUrl(repoUrl);
   } catch (err) {
-    return {
-      result: null,
-      errors: [`[AI Service] Invalid URL: ${(err as Error).message}`],
-      success: false,
-    };
+    return { result: null, errors: [`[AI Service] Invalid URL: ${(err as Error).message}`], success: false };
   }
 
-  let tree: TreeNode[];
+  // Tree (for entry detection) + full file fetch (one tarball) in parallel.
+  let tree: TreeNode[] = [];
+  let fetched;
   try {
-    tree = await getRepoTree(meta);
+    [tree, fetched] = await Promise.all([
+      getRepoTree(meta).catch(() => [] as TreeNode[]),
+      fetchRepoFiles(meta),
+    ]);
   } catch (err) {
-    return {
-      result: null,
-      errors: [`[AI Service] Tree fetch failed: ${(err as Error).message}`],
-      success: false,
-    };
+    return { result: null, errors: [`[AI Service] Repo fetch failed: ${(err as Error).message}`], success: false };
   }
 
-  const rawFiles = await getSourceFiles(meta, tree);
-
-  if (!rawFiles.length) {
-    return {
-      result: null,
-      errors: ["[AI Service] No valid source code files found in repository"],
-      success: false,
-    };
+  if (!fetched.files.length) {
+    return { result: null, errors: ["[AI Service] No source files found in repository"], success: false };
   }
 
-  const parsedRepo = parseRepo(rawFiles);
+  // Deterministic graph — the real deliverable.
+  const repoGraph = buildRepoGraph(fetched.files, {
+    truncated: fetched.truncated,
+    truncatedReason: fetched.truncatedReason,
+  });
+  const { graph, formattedAscii } = legacyM3(repoGraph);
+  const m3: IDependencyMap = {
+    graph,
+    formattedAscii,
+    version: repoGraph.version,
+    tree: repoGraph.tree,
+    files: repoGraph.files,
+    edges: repoGraph.edges,
+    cycles: repoGraph.cycles,
+    orphans: repoGraph.orphans,
+    layerFlow: repoGraph.layerFlow,
+    stats: repoGraph.stats,
+  };
 
+  // LLM context from the already-fetched files (no extra network).
+  const contentByPath = new Map(fetched.files.map((f) => [f.path, f.content]));
+  const parsedRepo = parseRepo(
+    fetched.files.filter((f) => LLM_SOURCE_EXT.has(extname(f.path))).slice(0, MAX_LLM_FILES),
+  );
   const entryCandidates = detectEntryCandidates(tree);
-  const entryContents = await resolveEntryContents(meta, entryCandidates);
+  const entryContents = await resolveEntryContents(meta, entryCandidates, contentByPath);
 
-  const enrichedRepo: EnrichedParsedRepo = {
-    ...parsedRepo,
-    entryCandidates,
-    entryContents,
-  };
-
-  let graphresult: AIServiceResult | null = null;
+  // LLM pass (m1/m2). Failure is non-fatal — the graph still ships.
+  const warnings: string[] = [];
+  let m1: IAnalysisResult["m1"] = [];
+  let m2: IAnalysisResult["m2"] = null;
   try {
-    graphresult = await runAnalysisGraph(parsedRepo, entryCandidates, entryContents);
-    if (graphresult && graphresult.success && graphresult.result) {
-      return graphresult;
+    const graphResult = await runAnalysisGraph(parsedRepo, entryCandidates, entryContents);
+    if (graphResult.success && graphResult.result) {
+      m1 = graphResult.result.m1 ?? [];
+      m2 = graphResult.result.m2 ?? null;
+      if (graphResult.errors.length) warnings.push(...graphResult.errors);
+    } else {
+      warnings.push("[AI Service] LLM pass unavailable — m1/m2 omitted", ...graphResult.errors);
     }
   } catch (err) {
-    console.warn("[AI Service] LangGraph LLM execution failed, using AST parsed fallback:", err);
+    warnings.push(`[AI Service] LLM pass failed — m1/m2 omitted: ${(err as Error).message}`);
   }
 
-  // Construct AST/regex parsed fallback result directly from GitHub tree & files
-  const fallbackResult: IAnalysisResult = {
-    m1: parsedRepo.files.slice(0, 10).map((f) => {
-      const p = f.filePath || (f as any).path || "src/file";
-      return {
-        path: p,
-        purpose: p.includes("route") || p.includes("controller") 
-          ? "API & Request handling" 
-          : p.includes("config") 
-          ? "Configuration settings" 
-          : `Source module for ${meta.owner}/${meta.repo}`,
-        type: p.includes("index") || p.includes("main") || p.includes("app") ? "entry" : "logic",
-      };
-    }),
-    m2: {
-      file: entryCandidates[0] || parsedRepo.files[0]?.filePath || "src/index.ts",
-      executionFlow: [
-        "Initialize module imports & environment config",
-        "Setup component lifecycle / routes",
-        "Export module entry point interface"
-      ],
-      description: `Primary entry candidate detected for ${meta.owner}/${meta.repo}`
-    },
-    m3: {
-      formattedAscii: "Dependency Tree",
-      graph: parsedRepo.files.slice(0, 8).map((f, i) => ({
-        file: f.filePath || (f as any).path || `module_${i}`,
-        imports: f.imports || [],
-        importedBy: i === 0 ? [] : [parsedRepo.files[0]?.filePath || "src/index.ts"]
-      }))
-    }
-  };
-
-  return {
-    result: fallbackResult,
-    errors: graphresult?.errors || [],
-    success: true
-  };
+  return { result: { m1, m2, m3 }, errors: warnings, success: true };
 };
 
-export const aiService = {
-   analyseRepository,
-}
+/** Prefer already-fetched content; fall back to a direct fetch only if missing. */
+const resolveEntryContents = async (
+  meta: RepoMeta,
+  candidates: string[],
+  contentByPath: Map<string, string>,
+): Promise<Array<{ path: string; content: string }>> => {
+  const out: Array<{ path: string; content: string }> = [];
+  for (const path of candidates.slice(0, 3)) {
+    const cached = contentByPath.get(path);
+    if (cached !== undefined) {
+      out.push({ path, content: cached });
+      continue;
+    }
+    try {
+      const file = await getFileContent(meta, path);
+      out.push({ path: file.path, content: file.content });
+    } catch {
+      console.warn(`[AI Service] Could not fetch entry file content for: ${path}`);
+    }
+  }
+  return out;
+};
 
-export default aiService
+export const aiService = { analyseRepository };
+export default aiService;

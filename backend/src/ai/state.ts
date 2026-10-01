@@ -1,16 +1,10 @@
 import { Annotation } from "@langchain/langgraph";
 import type { ParsedRepo } from "../services/parser.service.js";
 import type {
-  IDependencyNode,
   IEntryPoint,
   IFolderEntry,
 } from "../models/repoAnalysis.model.js";
 import { CombinedOutput } from "./nodes/combine.node.js";
-
-export interface IM3Result {
-  graph: IDependencyNode[];
-  formattedAscii: string;
-}
 
 export const GraphState = Annotation.Root({
   parsedRepo: Annotation<ParsedRepo>({
@@ -24,11 +18,6 @@ export const GraphState = Annotation.Root({
   }),
 
   m2Result: Annotation<IEntryPoint | null>({
-    reducer: (_, next) => next,
-    default: () => null,
-  }),
-
-  m3Result: Annotation<IM3Result | null>({
     reducer: (_, next) => next,
     default: () => null,
   }),

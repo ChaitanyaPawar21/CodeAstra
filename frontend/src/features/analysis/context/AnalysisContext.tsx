@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { DashboardData } from '../../../shared/types/dashboard';
+import type { DashboardData, GraphNode, GraphEdge, TechStack } from '../../../shared/types/dashboard';
 import { mockRepoData } from '../../../shared/data/mockDashboardData';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 interface AnalysisContextType {
   repoUrl: string;
@@ -8,260 +10,223 @@ interface AnalysisContextType {
   analysisData: DashboardData;
   isLoading: boolean;
   error: string | null;
-  analyzeRepo: (url: string) => Promise<DashboardData>;
+  analyzeRepo: (url: string) => Promise<void>;
 }
 
 const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined);
 
-// Helper to extract clean repo name from URL
 function parseGitHubUrl(url: string) {
   const clean = url.trim().replace(/\/$/, '');
   const parts = clean.split('/');
-  if (parts.length >= 2) {
-    const name = parts[parts.length - 1];
-    const owner = parts[parts.length - 2];
-    return { owner, name, fullName: `${owner}/${name}` };
-  }
-  return { owner: 'GitHub', name: clean || 'Repository', fullName: clean || 'Repository' };
+  const name = parts[parts.length - 1] || 'Repository';
+  const owner = parts.length >= 2 ? parts[parts.length - 2] : 'GitHub';
+  return { owner, name, fullName: `${owner}/${name}` };
 }
 
-// Generate dynamic DashboardData based on analyzed repo info
-function transformAnalysisResult(raw: any, targetUrl: string): DashboardData {
-  const { owner, name, fullName } = parseGitHubUrl(targetUrl);
-  const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
-  const repoNameLower = name.toLowerCase();
+// language id -> display label + tailwind chip classes
+const LANG_META: Record<string, TechStack> = {
+  ts: { name: 'TypeScript', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
+  tsx: { name: 'TypeScript (React)', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+  js: { name: 'JavaScript', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+  jsx: { name: 'JavaScript (React)', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+  mjs: { name: 'JavaScript', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+  cjs: { name: 'JavaScript', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+  py: { name: 'Python', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+  java: { name: 'Java', color: 'text-rose-400 bg-rose-500/10 border-rose-500/20' },
+};
 
-  // Infer tech stack based on repo name keywords
-  let primaryTech = 'TypeScript';
-  let category = 'Open Source Repository';
-  let stack = [
-    { name: 'TypeScript', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-    { name: 'Node.js', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-    { name: 'JSON Config', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' }
-  ];
-  let setupTech = ['Node.js', 'TypeScript', 'npm'];
-  let runCmd = 'npm run dev';
+const runCmdFor = (lang: string) =>
+  lang === 'py' ? 'python main.py' : lang === 'java' ? './mvnw spring-boot:run' : 'npm run dev';
+const installCmdFor = (lang: string) =>
+  lang === 'py' ? 'pip install -r requirements.txt' : lang === 'java' ? './mvnw install' : 'npm install';
 
-  if (repoNameLower.includes('react') || repoNameLower.includes('vue') || repoNameLower.includes('next') || repoNameLower.includes('svelte') || repoNameLower.includes('ui') || repoNameLower.includes('frontend')) {
-    primaryTech = repoNameLower.includes('vue') ? 'Vue.js' : repoNameLower.includes('svelte') ? 'Svelte' : repoNameLower.includes('next') ? 'Next.js' : 'React';
-    category = 'Frontend Framework / UI Library';
-    stack = [
-      { name: primaryTech, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
-      { name: 'TypeScript', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-      { name: 'Vite / Webpack', color: 'text-purple-400 bg-purple-500/10 border-purple-500/20' }
-    ];
-    setupTech = [primaryTech, 'TypeScript', 'Node.js', 'Vite'];
-  } else if (repoNameLower.includes('express') || repoNameLower.includes('nest') || repoNameLower.includes('server') || repoNameLower.includes('api') || repoNameLower.includes('backend') || repoNameLower.includes('fastify')) {
-    primaryTech = repoNameLower.includes('nest') ? 'NestJS' : repoNameLower.includes('fastify') ? 'Fastify' : 'Express.js';
-    category = 'Backend Server Framework';
-    stack = [
-      { name: primaryTech, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-      { name: 'Node.js', color: 'text-green-400 bg-green-500/10 border-green-500/20' },
-      { name: 'REST / GraphQL', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' }
-    ];
-    setupTech = [primaryTech, 'Node.js', 'REST API'];
-  } else if (repoNameLower.includes('python') || repoNameLower.includes('django') || repoNameLower.includes('flask') || repoNameLower.includes('fastapi') || repoNameLower.includes('ai')) {
-    primaryTech = 'Python';
-    category = 'Python Application / Backend';
-    stack = [
-      { name: 'Python 3.11+', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
-      { name: 'PyPI Modules', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' }
-    ];
-    setupTech = ['Python 3.11', 'pip', 'virtualenv'];
-    runCmd = 'python main.py';
+// Map the backend v2 result (m1/m2/m3) into DashboardData — all derived, never fabricated.
+function transformReal(raw: any, targetUrl: string): DashboardData {
+  const { name, fullName } = parseGitHubUrl(targetUrl);
+  const m1 = Array.isArray(raw?.m1) ? raw.m1 : [];
+  const m2 = raw?.m2 ?? null;
+  const m3 = raw?.m3 ?? {};
+  const files: Record<string, any> = m3.files ?? {};
+  const ids = Object.keys(files);
+  const stats = m3.stats ?? { files: ids.length, parsed: ids.length, edges: (m3.edges ?? []).length, unresolved: 0, truncated: false, truncatedReason: null, unsupportedLanguages: [] };
+
+  // --- dependency graph (real) ---
+  const cycleOf = new Map<string, number>();
+  (m3.cycles ?? []).forEach((c: string[], i: number) => c.forEach((id) => cycleOf.set(id, i)));
+
+  const nodes: GraphNode[] = ids.map((id) => {
+    const f = files[id];
+    return {
+      id,
+      label: f.path,
+      type: f.layer,
+      language: f.language,
+      layerReason: f.layerReason,
+      loc: f.loc,
+      exports: f.exports ?? [],
+      externalPackages: f.externalPackages ?? [],
+      imports: f.imports ?? [],
+      importedBy: f.importedBy ?? [],
+    };
+  });
+
+  const edges: GraphEdge[] = (m3.edges ?? []).map((e: any) => ({
+    source: e.source,
+    target: e.target,
+    typeOnly: e.typeOnly,
+    cyclic: cycleOf.has(e.source) && cycleOf.get(e.source) === cycleOf.get(e.target),
+  }));
+
+  // --- language mix ---
+  const langCount = new Map<string, number>();
+  for (const id of ids) {
+    const l = files[id].language;
+    if (l && l !== 'other') langCount.set(l, (langCount.get(l) ?? 0) + 1);
   }
+  const langsByFreq = [...langCount.entries()].sort((a, b) => b[1] - a[1]).map(([l]) => l);
+  const primaryLang = langsByFreq[0] ?? 'ts';
+  const techStack: TechStack[] = langsByFreq.slice(0, 4).map((l) => LANG_META[l] ?? { name: l, color: 'text-slate-300 bg-slate-500/10 border-slate-500/20' });
 
-  // Extract M1 folder entries if provided by backend
-  const m1Folders = raw?.m1 || raw?.folderHierarchy;
-  const m2Entry = raw?.m2 || raw?.entryPoints;
-  const m3Graph = raw?.m3 || raw?.dependencyGraph;
+  // --- folders (prefer m1, else derive top-level dirs with real counts) ---
+  const dirCount = new Map<string, number>();
+  for (const id of ids) {
+    const p = files[id].path as string;
+    const top = p.includes('/') ? p.slice(0, p.indexOf('/')) : '.';
+    dirCount.set(top, (dirCount.get(top) ?? 0) + 1);
+  }
+  const folderHierarchy = m1.length
+    ? m1.map((item: any) => ({
+        name: item.path,
+        explanation: item.purpose,
+        filesCount: ids.filter((id) => (files[id].path as string).startsWith(item.path)).length,
+        isStarred: item.type === 'entry',
+      }))
+    : [...dirCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([dir, count]) => ({
+        name: dir,
+        explanation: `${count} file${count === 1 ? '' : 's'}`,
+        filesCount: count,
+      }));
 
-  const folderHierarchy = m1Folders?.map((item: any) => ({
-    name: item.path || item.name,
-    explanation: item.purpose || item.explanation || `Core module section for ${name}`,
-    filesCount: item.filesCount || Math.floor(Math.random() * 18) + 4,
-    isStarred: item.type === 'entry' || item.isStarred
-  })) || [
-    { name: `src/core`, explanation: `Main business logic & engine for ${name}`, filesCount: 18, isStarred: true },
-    { name: `src/modules`, explanation: `Modular subcomponents & helpers`, filesCount: 14, isStarred: true },
-    { name: `src/config`, explanation: `Runtime settings and environment variables`, filesCount: 6 },
-    { name: `src/utils`, explanation: `Helper utilities and shared functions`, filesCount: 9 },
-    { name: `tests`, explanation: `Automated test suites & specs`, filesCount: 12 }
-  ];
+  // --- entry points (prefer m2, else entry-layer files) ---
+  const entryNodes = nodes.filter((n) => n.type === 'entry');
+  const entryPoints = m2?.file
+    ? [{ label: m2.file }, ...((m2.executionFlow ?? []).map((s: string) => ({ label: s })))]
+    : entryNodes.slice(0, 5).map((n) => ({ label: n.label }));
 
-  const entryPoints = m2Entry ? (
-    Array.isArray(m2Entry) 
-      ? m2Entry 
-      : [
-          { label: m2Entry.file || `${name}/main.ts` },
-          ...(m2Entry.executionFlow || []).map((step: string) => ({ label: step }))
-        ]
-  ) : [
-    { label: `${name}/index.ts` },
-    { label: "load environment configuration" },
-    { label: "initialize core dependencies" },
-    { label: "bind module event listeners" },
-    { label: "start runtime loop / export entry points" }
-  ];
+  // --- critical files: most-imported (real fan-in) ---
+  const colorByRank = ['red', 'yellow', 'purple', 'blue'] as const;
+  const criticalFiles = [...nodes]
+    .sort((a, b) => (b.importedBy?.length ?? 0) - (a.importedBy?.length ?? 0))
+    .filter((n) => (n.importedBy?.length ?? 0) > 0)
+    .slice(0, 4)
+    .map((n, i) => ({
+      name: n.label,
+      importance: `Imported by ${n.importedBy!.length} module${n.importedBy!.length === 1 ? '' : 's'} (${n.type})`,
+      riskLevel: n.importedBy!.length >= 5 ? 'High' : 'Medium',
+      colorTheme: colorByRank[i] ?? 'blue',
+      isStarred: i < 2,
+    }));
 
-  const graphNodes = m3Graph?.graph ? m3Graph.graph.map((n: any, idx: number) => ({
-    id: String(idx + 1),
-    label: n.file || `${name}/module_${idx + 1}.ts`,
-    type: idx === 0 ? 'route' : idx === 1 ? 'controller' : idx % 2 === 0 ? 'service' : 'utility',
-    color: idx === 0 ? 'blue' : idx === 1 ? 'purple' : 'green',
-    metadata: {
-      dependencies: n.imports || [],
-      importedBy: n.importedBy || [],
-      aiSummary: `Module component handling logic for ${n.file || name}`,
-      complexityScore: 3.5 + (idx % 4),
-      riskLevel: idx === 0 ? 'High' : 'Medium',
-      relatedModules: ['src/']
-    }
-  })) : [
-    { 
-      id: "1", label: `${name}/index.ts`, type: "route", color: "blue",
-      metadata: { dependencies: [`${name}/config.ts`, `${name}/core.ts`], importedBy: [], aiSummary: `Primary entry point module for ${fullName}`, complexityScore: 4.5, riskLevel: "High", relatedModules: ["src/"] }
+  // --- AI insights derived from graph structure (no templated per-file text) ---
+  const mostImported = criticalFiles[0];
+  const aiInsights = [
+    mostImported && {
+      title: 'Most connected module',
+      description: `${mostImported.name} is imported by the most modules — changes here have the widest blast radius.`,
+      iconType: 'connection' as const,
+      colorTheme: 'blue' as const,
     },
-    { 
-      id: "2", label: `${name}/core.ts`, type: "controller", color: "purple",
-      metadata: { dependencies: [`${name}/utils.ts`], importedBy: [`${name}/index.ts`], aiSummary: `Core engine & business logic processing for ${name}`, complexityScore: 7.2, riskLevel: "Critical", relatedModules: ["src/core"] }
+    {
+      title: (m3.cycles?.length ?? 0) > 0 ? `${m3.cycles.length} circular dependency group(s)` : 'No circular dependencies',
+      description: (m3.cycles?.length ?? 0) > 0
+        ? 'Import cycles detected — shown as dashed red edges in the graph.'
+        : 'No import cycles were found in the resolved graph.',
+      iconType: 'risk' as const,
+      colorTheme: (m3.cycles?.length ?? 0) > 0 ? ('red' as const) : ('cyan' as const),
     },
-    { 
-      id: "3", label: `${name}/config.ts`, type: "config", color: "orange",
-      metadata: { dependencies: [], importedBy: [`${name}/index.ts`], aiSummary: `Environment configuration & settings for ${name}`, complexityScore: 2.1, riskLevel: "Low", relatedModules: ["src/config"] }
+    {
+      title: 'Graph coverage',
+      description: `${stats.parsed}/${stats.files} files parsed, ${stats.edges} edges, ${stats.unresolved} unresolved import(s)${stats.unsupportedLanguages.length ? `; unsupported: ${stats.unsupportedLanguages.join(', ')}` : ''}.`,
+      iconType: 'module' as const,
+      colorTheme: 'purple' as const,
     },
-    { 
-      id: "4", label: `${name}/utils.ts`, type: "utility", color: "pink",
-      metadata: { dependencies: [], importedBy: [`${name}/core.ts`], aiSummary: `Shared helper utility methods`, complexityScore: 3.0, riskLevel: "Medium", relatedModules: ["src/utils"] }
-    }
-  ];
+  ].filter(Boolean) as DashboardData['aiInsights'];
 
-  const graphEdges = m3Graph?.graph ? m3Graph.graph.flatMap((n: any, idx: number) => 
-    (n.imports || []).map((imp: string) => ({
-      source: String(idx + 1),
-      target: String(graphNodes.findIndex((gn: any) => gn.label.includes(imp)) + 1 || 2),
-      animated: true
-    }))
-  ) : [
-    { source: "1", target: "2", animated: true },
-    { source: "1", target: "3" },
-    { source: "2", target: "4" }
-  ];
+  const avgFanout = stats.files ? Math.round((stats.edges / stats.files) * 10) / 10 : 0;
 
   return {
     repoUrl: targetUrl,
+    isSample: false,
     summary: {
-      title: capitalizedName,
-      techStack: stack,
-      totalFiles: raw?.summary?.totalFiles || Math.floor(Math.random() * 120) + 35,
-      complexity: raw?.summary?.complexity || 4.5,
-      description: raw?.summary?.description || `AI Repository Analysis for ${fullName}. Scanned module entry points, component hierarchy, and execution flow.`,
+      title: name.charAt(0).toUpperCase() + name.slice(1),
+      techStack,
+      totalFiles: stats.files,
+      complexity: avgFanout,
+      description: m2?.description || `Deterministic dependency analysis of ${fullName}: ${stats.files} files, ${stats.edges} import edges, ${m3.cycles?.length ?? 0} cycle group(s).`,
       bulletPoints: [
-        `Target Repository: ${fullName}`,
-        `Primary stack: ${primaryTech}`,
-        `Automated entry point & dependency graph extraction`
-      ]
+        `Target: ${fullName}`,
+        `Primary language: ${LANG_META[primaryLang]?.name ?? primaryLang}`,
+        `${stats.edges} resolved import edges across ${stats.files} files`,
+      ],
     },
     repositoryOverview: {
       name: fullName,
-      category: category,
-      description: `Analysis report for ${fullName}. Contains directory structures, module connections, and critical files for developer onboarding.`,
-      technologies: [primaryTech, 'Git', 'Package Manager'],
-      architectures: ['Modular Architecture', 'Decoupled Components'],
-      capabilities: ['Core Execution', 'API Boundaries', 'Configuration Management']
+      category: `${LANG_META[primaryLang]?.name ?? primaryLang} project`,
+      description: m2?.description || `Static dependency graph for ${fullName}, built from parsed imports.`,
+      technologies: techStack.map((t) => t.name),
+      architectures: [...new Set(nodes.map((n) => n.type))].slice(0, 6),
+      capabilities: m1.slice(0, 4).map((f: any) => f.purpose).filter(Boolean),
     },
     quickSetupGuide: {
-      techStack: setupTech,
-      installCommand: 'npm install',
-      runCommand: runCmd
+      techStack: techStack.map((t) => t.name),
+      installCommand: installCmdFor(primaryLang),
+      runCommand: runCmdFor(primaryLang),
     },
     folderHierarchy,
     entryPoints,
-    criticalFiles: [
-      { name: `${name}/index.ts`, importance: "Main execution entry file", riskLevel: "High", colorTheme: "red", isStarred: true },
-      { name: "package.json", importance: "Dependencies & script definitions", riskLevel: "High", colorTheme: "yellow", isStarred: true },
-      { name: `${name}/config.ts`, importance: "Runtime configuration & environment settings", riskLevel: "Medium", colorTheme: "blue" },
-      { name: `${name}/core.ts`, importance: "Primary business logic handler", riskLevel: "High", colorTheme: "purple" }
-    ],
-    requestLifecycle: mockRepoData.requestLifecycle,
-    aiInsights: [
-      {
-        title: `Architectural Blueprint for ${capitalizedName}`,
-        description: `Discovered core execution module in ${fullName} with modular separation across files.`,
-        iconType: "module",
-        colorTheme: "blue"
-      },
-      {
-        title: "Automated Build & Setup",
-        description: `Configured for ${primaryTech} package management and quick local developer installation.`,
-        iconType: "suggestion",
-        colorTheme: "cyan"
-      },
-      {
-        title: "Dependency Coupling Analysis",
-        description: `Primary entry file imports core configuration with low circular dependency risk.`,
-        iconType: "risk",
-        colorTheme: "purple"
-      }
-    ],
+    criticalFiles,
+    requestLifecycle: mockRepoData.requestLifecycle, // generic 6-step illustration; not analysis output
+    aiInsights,
     dependencyGraph: {
-      nodes: graphNodes,
-      edges: graphEdges
-    }
+      nodes,
+      edges,
+      cycles: m3.cycles ?? [],
+      orphans: m3.orphans ?? [],
+      layerFlow: m3.layerFlow ?? [],
+      stats,
+    },
   };
 }
 
 export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [repoUrl, setRepoUrl] = useState<string>('https://github.com/facebook/react');
-  const [analysisData, setAnalysisData] = useState<DashboardData>(mockRepoData);
+  const [analysisData, setAnalysisData] = useState<DashboardData>({ ...mockRepoData, isSample: true });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const analyzeRepo = useCallback(async (url: string): Promise<DashboardData> => {
+  const analyzeRepo = useCallback(async (url: string): Promise<void> => {
     setIsLoading(true);
     setError(null);
     setRepoUrl(url);
 
-    // Always immediately set dynamic data so dashboard has something to show
-    const quickFallback = transformAnalysisResult(null, url);
-    setAnalysisData(quickFallback);
-
     try {
-      // Race: backend call vs 15-second timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(`${API_URL}/api/analysis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl: url }),
+      });
+      const json = await response.json().catch(() => null);
 
-      let response: Response | null = null;
-      try {
-        response = await fetch('http://localhost:5000/api/analysis', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repoUrl: url }),
-          signal: controller.signal,
-        });
-      } catch {
-        // Fetch failed or aborted — fall through
-      } finally {
-        clearTimeout(timeoutId);
+      if (!response.ok || !json?.success || !json?.data) {
+        const msg = json?.message || json?.errors?.join(' | ') || `Request failed (${response.status})`;
+        setError(msg);
+        return;
       }
-
-      if (response && response.ok) {
-        const json = await response.json().catch(() => null);
-        if (json?.success && json?.data) {
-          const transformed = transformAnalysisResult(json.data, url);
-          setAnalysisData(transformed);
-          setIsLoading(false);
-          return transformed;
-        }
-      }
-
-      // Backend failed / timed out — use the already-set dynamic fallback
-      setIsLoading(false);
-      return quickFallback;
+      setAnalysisData(transformReal(json.data, url));
     } catch (err: any) {
-      console.warn("analyzeRepo error:", err);
+      setError(err?.message || 'Could not reach the analysis backend.');
+    } finally {
       setIsLoading(false);
-      return quickFallback;
     }
   }, []);
 
@@ -274,8 +239,6 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 export const useAnalysis = () => {
   const context = useContext(AnalysisContext);
-  if (!context) {
-    throw new Error('useAnalysis must be used within an AnalysisProvider');
-  }
+  if (!context) throw new Error('useAnalysis must be used within an AnalysisProvider');
   return context;
 };

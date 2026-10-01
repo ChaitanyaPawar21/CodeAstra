@@ -52,7 +52,16 @@ export const analyzeRepo = async (req: Request, res: Response) => {
 
   await analysisDAO.markActive(id);
 
- const aiResult = await aiService.analyseRepository(cleanUrl);
+  let aiResult;
+  try {
+    aiResult = await aiService.analyseRepository(cleanUrl);
+  } catch (err) {
+    const msg = (err as Error).message;
+    console.error("[Controller] Analysis threw:", msg);
+    await analysisDAO.markFailed(id, msg);
+    res.status(500).json({ success: false, message: "Analysis failed", errors: [msg] });
+    return;
+  }
 
   if (!aiResult.success || !aiResult.result) {
     await analysisDAO.markFailed(id, aiResult.errors.join(" | "));

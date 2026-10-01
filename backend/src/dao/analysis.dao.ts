@@ -2,11 +2,14 @@ import repoAnalysisModel, {
   IRepoAnalysis,
   IAnalysisResult,
 } from "../models/repoAnalysis.model.js";
+import { ANALYSIS_VERSION } from "../services/repograph/types.js";
 
 export class AnalysisDAO {
   async findByUrlHash(repoUrlHash: string): Promise<IRepoAnalysis | null> {
+    // Only serve cache produced by the current pipeline version; older rows
+    // (or pre-versioning rows with no field) force a fresh analysis.
     return repoAnalysisModel
-      .findOne({ repoUrlHash, status: "completed" })
+      .findOne({ repoUrlHash, status: "completed", analysisVersion: { $gte: ANALYSIS_VERSION } })
       .exec();
   }
 
@@ -34,7 +37,7 @@ export class AnalysisDAO {
   ): Promise<IRepoAnalysis | null> {
     return repoAnalysisModel.findByIdAndUpdate(
       id,
-      { status: "completed", result, error: null, completedAt: new Date() },
+      { status: "completed", result, analysisVersion: ANALYSIS_VERSION, error: null, completedAt: new Date() },
       { new: true },
     );
   }

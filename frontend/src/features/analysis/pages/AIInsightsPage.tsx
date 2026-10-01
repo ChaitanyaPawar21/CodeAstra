@@ -30,7 +30,7 @@ export default function AIInsightsPage() {
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">AI Intelligence Center</h1>
+            <h1 className="text-2xl font-bold text-[#000000] tracking-tight">AI Intelligence Center</h1>
             <p className="text-xs text-slate-400 font-mono mt-0.5">Automated architectural discovery & optimization roadmap ({data.summary.title})</p>
           </div>
         </div>
@@ -56,7 +56,7 @@ export default function AIInsightsPage() {
                <motion.div 
                  variants={itemVariants} 
                  key={i} 
-                 className="bg-[#12141C] border border-white/[0.07] rounded-2xl p-6 shadow-lg hover:border-white/[0.15] transition-all duration-300 group cursor-pointer"
+                 className="bg-[#FFFBE0] border border-black rounded-2xl p-6 shadow-lg hover:border-black transition-all duration-300 group cursor-pointer"
                >
                  <div className="flex items-start gap-4">
                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${iconColors[insight.colorTheme] || iconColors.blue}`}>
@@ -67,12 +67,12 @@ export default function AIInsightsPage() {
                        {insight.iconType === 'connection' && <ArrowRight className="w-4 h-4" />}
                    </div>
                    <div className="flex-1">
-                     <h3 className="text-base font-semibold text-white mb-1.5 group-hover:text-indigo-300 transition-colors">{insight.title}</h3>
+                     <h3 className="text-base font-semibold text-[#000000] mb-1.5 transition-colors">{insight.title}</h3>
                      <p className="text-xs text-slate-400 leading-relaxed">{insight.description}</p>
                      
-                     <div className="mt-4 pt-3 border-t border-white/[0.05] flex items-center justify-between opacity-80 group-hover:opacity-100 transition-opacity">
-                       <span className="text-xs font-mono text-indigo-400 font-medium">Explore recommendation</span>
-                       <ArrowRight className="w-3.5 h-3.5 text-indigo-400 group-hover:translate-x-1 transition-transform" />
+                     <div className="mt-4 pt-3 border-t border-black flex items-center justify-between opacity-80 group-hover:opacity-100 transition-opacity">
+                       <span className="text-xs font-mono text-black font-semibold">Explore recommendation</span>
+                       <ArrowRight className="w-3.5 h-3.5 text-black group-hover:translate-x-1 transition-transform" />
                      </div>
                    </div>
                  </div>

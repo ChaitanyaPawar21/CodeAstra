@@ -34,15 +34,6 @@ const Skip_Dirs = new Set([
   "vendor",
 ]);
 
-const Source_Extensions = new Set([
-  ".js",
-  ".ts",
-  ".jsx",
-  ".tsx",
-  ".py",
-  ".java",
-]);
-
 const Entry_Candidates = [
   "server.js",
   "server.ts",
@@ -57,11 +48,7 @@ const Entry_Candidates = [
   "Main.java",
 ];
 
-const MAX_FILES = 60; // Batch limit for M3 dependency mapping
-const BATCH_SIZE = 5; // Parallel requests per batch
-const RATE_DELAY_MS = 100; // Pause between batches to respect rate limits
-
-const octokit = new Octokit({
+export const octokit = new Octokit({
   auth: config.GITHUB_TOKEN || undefined,
 });
 /**
@@ -86,15 +73,6 @@ export const parseRepoUrl = (url: string): RepoMeta => {
 const shouldSkip = (path: string): boolean => {
   const split = path.split("/").some((seg) => Skip_Dirs.has(seg));
   return split;
-};
-
-const isSourceFile = (path: string): boolean => {
-  const ext = "." + path.split(".").pop()!.toLowerCase();
-  return Source_Extensions.has(ext);
-};
-
-const sleep = (ms: number): Promise<void> => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 export const getRepoTree = async (meta: RepoMeta): Promise<TreeNode[]> => {
@@ -174,52 +152,12 @@ export const getFileContent = async (
   }
 };
 
-export const getSourceFiles = async (
-  meta: RepoMeta,
-  tree: TreeNode[]
-): Promise<FileContent[]> => {
-
-  // Step 1: filter blobs → extract .path strings → cap at MAX_FILES
-  const candidatePaths: string[] = tree
-    .filter((n) => n.type === "blob" && isSourceFile(n.path))
-    .map((n) => n.path)        
-    .slice(0, MAX_FILES);
-
-  const results: FileContent[] = [];
-
-  for (let i = 0; i < candidatePaths.length; i += BATCH_SIZE) {
-    const batch: string[] = candidatePaths.slice(i, i + BATCH_SIZE);
-
-    const batchResults = await Promise.all(
-      batch.map(async (filePath: string) => {  
-        try {
-          return await getFileContent(meta, filePath);
-        } catch (err: any) {
-          console.warn(`[GitHub Service] Skipped '${filePath}':`, err.message);
-          return null;
-        }
-      })
-    );
-
-    batchResults.forEach((file) => {
-      if (file) results.push(file);
-    });
-
-    if (i + BATCH_SIZE < candidatePaths.length) {
-      await sleep(RATE_DELAY_MS);
-    }
-  }
-
-  return results;
-};
-
 export const githubService = {
   parseRepoUrl,
   getRepoTree,
   filterDirs,
   detectEntryCandidates,
   getFileContent,
-  getSourceFiles,
 };
 
 export default githubService;

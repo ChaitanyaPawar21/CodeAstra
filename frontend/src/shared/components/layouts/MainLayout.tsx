@@ -4,7 +4,7 @@ import Navbar from './Navbar';
 
 export default function MainLayout() {
   return (
-    <div className="flex h-screen bg-[#0D0E14] overflow-hidden text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div className="flex h-screen bg-[#FBF3C4] overflow-hidden text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-200">
       <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <Navbar />

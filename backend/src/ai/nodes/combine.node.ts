@@ -10,19 +10,17 @@ export interface CombinedOutput {
 export const combineNode = (
   state: GraphStateType,
 ): Partial<GraphStateType> & { combined: CombinedOutput } => {
-  const { m1Result, m2Result, m3Result, errors } = state;
+  const { m1Result, m2Result, errors } = state;
 
   if (!m1Result) errors.push("[Combine] M1 result missing");
   if (!m2Result) errors.push("[Combine] M2 result missing");
-  if (!m3Result) errors.push("[Combine] M3 result missing");
 
+  // m3 is produced by the repograph pipeline and attached downstream in
+  // ai.service; the LLM graph leaves it empty.
   const result: IAnalysisResult = {
     m1: m1Result ?? [],
-    m2: m2Result ?? { file: "", executionFlow: [], description: "" },
-    m3: {
-      graph: m3Result?.graph ?? [],
-      formattedAscii: m3Result?.formattedAscii ?? "",
-    },
+    m2: m2Result ?? null,
+    m3: { graph: [], formattedAscii: "" },
   };
 
   return {

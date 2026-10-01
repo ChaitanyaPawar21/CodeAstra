@@ -1,76 +1,88 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FolderTree, Code2, Lightbulb, MessageSquare, Network, Settings } from 'lucide-react';
+import { LayoutDashboard, FolderTree, Code2, Lightbulb, MessageSquare, Network, Share2, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function Sidebar() {
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Repository Structure', path: '/repository', icon: FolderTree },
-    { name: 'Code Analysis', path: '/code', icon: Code2 },
-    { name: 'AI Insights', path: '/insights', icon: Lightbulb },
-    { name: 'Dependency Graph', path: '/graph', icon: Network },
-    { name: 'AI Chat', path: '/chat', icon: MessageSquare },
-  ];
+// Single source of truth for nav — Navbar reads the same shape for its breadcrumb.
+export const navGroups = [
+  {
+    label: 'Overview',
+    items: [{ name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard }],
+  },
+  {
+    label: 'Explore',
+    items: [
+      { name: 'Repository', path: '/repository', icon: FolderTree },
+      { name: 'Dependency Graph', path: '/graph', icon: Network },
+      { name: 'Architecture', path: '/architecture', icon: Share2 },
+      { name: 'Code Analysis', path: '/code', icon: Code2 },
+    ],
+  },
+  {
+    label: 'AI',
+    items: [
+      { name: 'AI Insights', path: '/insights', icon: Lightbulb },
+      { name: 'AI Chat', path: '/chat', icon: MessageSquare },
+    ],
+  },
+];
 
+export default function Sidebar() {
   return (
-    <div className="w-[72px] bg-[#0D0E14] border-r border-white/[0.06] flex flex-col items-center py-5 h-full shrink-0 relative z-50">
-      
-      {/* Brand Icon */}
-      <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold text-sm mb-6 shadow-md shadow-indigo-600/20 border border-indigo-400/30">
-        CA
+    <div className="w-60 bg-[#FBF3C4] border-r border-black flex flex-col py-5 h-full shrink-0 relative z-50">
+
+      {/* Brand */}
+      <div className="flex items-center gap-3 px-5 mb-7">
+        <div className="w-9 h-9 bg-indigo-600 text-black rounded-xl flex items-center justify-center font-bold text-sm shadow-md shadow-indigo-600/20 border border-indigo-400/30">
+          CA
+        </div>
+        <div className="flex flex-col leading-tight">
+          <span className="font-semibold text-sm tracking-tight text-slate-100">CodeAstra</span>
+          <span className="text-[10px] text-slate-400 font-mono">Repository Intelligence</span>
+        </div>
       </div>
 
-      <nav className="flex-1 w-full flex flex-col items-center gap-2">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `relative w-10 h-10 rounded-xl flex items-center justify-center group transition-colors duration-200 ${
-                isActive ? 'text-white bg-indigo-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-indigo-500/10 rounded-xl border border-indigo-500/20"
-                    initial={false}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                  />
+      <nav className="flex-1 w-full flex flex-col gap-6 px-3 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.label} className="flex flex-col gap-1">
+            <span className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              {group.label}
+            </span>
+            {group.items.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                    isActive ? 'text-black' : 'text-slate-400 hover:text-slate-200 hover:bg-black/[0.04]'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeNavItem"
+                        className="absolute inset-0 bg-indigo-500/10 rounded-lg border border-indigo-500/20"
+                        initial={false}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                    <item.icon className={`w-[18px] h-[18px] relative z-10 shrink-0 ${isActive ? 'text-indigo-400' : ''}`} />
+                    <span className="relative z-10 font-medium">{item.name}</span>
+                  </>
                 )}
-                {/* Active Left Indicator Bar */}
-                {isActive && (
-                  <motion.div
-                    layoutId="activeIndicator"
-                    className="absolute -left-[16px] top-2 bottom-2 w-[3px] bg-indigo-500 rounded-r-full shadow-sm"
-                    initial={false}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                  />
-                )}
-                <item.icon className={`w-5 h-5 relative z-10 transition-colors duration-200 ${isActive ? 'text-indigo-400' : ''}`} />
-                
-                {/* Tooltip */}
-                <div className="absolute left-full ml-4 px-2.5 py-1 bg-[#1A1C28] text-slate-200 text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 whitespace-nowrap z-50 shadow-lg border border-white/10 -translate-x-1 group-hover:translate-x-0">
-                  {item.name}
-                </div>
-              </>
-            )}
-          </NavLink>
+              </NavLink>
+            ))}
+          </div>
         ))}
       </nav>
 
-      <div className="mt-auto pt-3 border-t border-white/[0.06] w-full flex justify-center">
-        <button className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-colors group relative">
-          <Settings className="w-5 h-5" />
-          <div className="absolute left-full ml-4 px-2.5 py-1 bg-[#1A1C28] text-slate-200 text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 whitespace-nowrap z-50 shadow-lg border border-white/10 -translate-x-1 group-hover:translate-x-0">
-            Settings
-          </div>
+      <div className="mt-auto pt-3 px-3 border-t border-black">
+        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-slate-200 hover:bg-black/[0.04] transition-colors">
+          <Settings className="w-[18px] h-[18px]" />
+          <span className="font-medium">Settings</span>
         </button>
       </div>
     </div>
   );
 }
-

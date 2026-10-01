@@ -2,28 +2,25 @@ import { END, START, StateGraph } from "@langchain/langgraph";
 import { GraphState } from "./state.js";
 import { M1FolderNode } from "./nodes/m1Folder.node.js";
 import { m2EntryPointNode } from "./nodes/m2EntryPoint.node.js";
-import { m3DependencyNode } from "./nodes/m3Dependency.node.js";
 import { CombinedOutput, combineNode } from "./nodes/combine.node.js";
 import { ParsedRepo } from "../services/parser.service.js";
 import { IAnalysisResult } from "../models/repoAnalysis.model.js";
 
+// m3 (dependency graph) is now produced deterministically by the repograph
+// pipeline, not the LLM. This graph only runs the m1/m2 reasoning passes.
 const workFlow = new StateGraph(GraphState)
   /** parallel nodes */
   .addNode("m1", M1FolderNode)
   .addNode("m2", m2EntryPointNode)
-  .addNode("m3", m3DependencyNode)
   .addNode("combine", combineNode)
 
   /**Start  */
   .addEdge(START, "m1")
   .addEdge(START, "m2")
-  .addEdge(START, "m3")
 
-  /**all 3 must complete before combine runs */
-
+  /** both must complete before combine runs */
   .addEdge("m1", "combine")
   .addEdge("m2", "combine")
-  .addEdge("m3", "combine")
 
   .addEdge("combine", END);
 
@@ -48,7 +45,6 @@ export const runAnalysisGraph = async (
       entryContents,
       m1Result: null,
       m2Result: null,
-      m3Result: null,
       errors: [],
       combined: null,
     });
