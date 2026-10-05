@@ -2,6 +2,8 @@
 
 This document explains how the `backend/` directory is designed, and how the AI layer fits into it.
 
+*Updated 2026-10-05 after a second, full pass over every file in `backend/` (branch `chaitanya`, commit `76b9542`). The source code has not changed since commit `220c991`. This pass added: the details of each language extractor, the tests, the config files, and a step-by-step trace of how AI errors move through the code (sections 1.9, 1.10 and 2.10, plus corrections to 1.6 and 2.8).*
+
 ---
 
 ## Part 1: How the backend is designed
@@ -30,6 +32,10 @@ It has **one API endpoint**: `POST /api/analysis` with body `{ "repoUrl": "https
 - **Deployment:** Vercel. `vercel.json` routes `/api/*` to the backend service, with a 60-second function limit
 
 > Note: `package.json` also lists `@langchain/groq`, `web-tree-sitter`, `tree-sitter-wasms`, `axios` and `mongodb`, but nothing in `src/` imports them. The code parsers are regex-based, not tree-sitter. The README still mentions Gemini, but the code uses NVIDIA.
+>
+> `.env` also defines keys the code never reads (`GOOGLE_API_KEY`, `GROQ_API_KEY`, `NODE_ENV`), and defines `MONGO_URI` twice. dotenv keeps the **first** value, so the second one is ignored.
+>
+> TypeScript settings: `module`/`moduleResolution` are `Node16` and `strict` is on, which is why imports are written as `./x.js` even though the files are `.ts`. `vitest.config.ts` has a small plugin that rewrites those `.js` imports so the tests can load the `.ts` source files.
 
 ### 1.3 Folder structure (layered architecture)
 
@@ -134,6 +140,8 @@ Each row also has `jobId`, `error`, `completedAt` and timestamps. `userId` exist
 
 **Key design rule:** if the AI fails, the request **does not fail**. M3 is always returned; M1 becomes `[]` and M2 becomes `null`, and a warning is added. Only a bad URL, a failed fetch, or a repo with no files counts as a failed request.
 
+**Correction from the second pass:** M1 and M2 are kept or dropped **together**. `ai.service` keeps them only when the graph reports `success: true`, and the graph reports success only when **no** node added an error. So if only M2 fails (for example, the repo has no `server.ts`/`index.js`/`main.py`-style file), the correct M1 result is thrown away as well. See 2.10.
+
 ### 1.7 The plain-code graph pipeline (M3): `services/repograph/`
 
 This is the part that gives exact, repeatable results, with no AI involved.
@@ -191,6 +199,46 @@ RepoAnalysis {
 
 The newer M3 fields are stored as `Schema.Types.Mixed`. The developer keeps the Mongoose schema simple and relies on TypeScript types to enforce the shape.
 Indexes: `{ repoUrlHash, status }` (cache lookup) and `{ userId, createdAt }` (for future per-user history).
+
+### 1.9 The backend has two parsers
+
+There are two separate regex-based parsers, each with its own job:
+
+| Parser | File | Used for | Languages |
+|---|---|---|---|
+| **Old parser** | `services/parser.service.ts` | Building the **LLM input** (file list for M1, function names as a fallback for M2) | JS/TS, Python, Java |
+| **New extractors** | `services/repograph/extractors/*` | Building the **M3 graph** (imports, exports, framework hints, import resolution) | JS/TS (`.js .jsx .ts .tsx .mjs .cjs`), Python, Java |
+
+The new extractors do much more than the old parser:
+- **JS/TS:** `import` (including `import type`), dynamic `import()`, `require()`, re-exports, `export { a, b as c }`, `export default`. Resolution tries the exact path, then each extension, then `index.*`, maps `./x.js` to `x.ts`, and applies tsconfig `paths` aliases. A bare name such as `express` that isn't an alias is treated as an external package.
+- **Python:** `from . import`, `from ..pkg import`, `import a.b, c`. Relative imports are resolved by counting the dots. An absolute import counts as internal only if a matching `.py` or `__init__.py` file exists (also checked under `src/`); otherwise it is an external package.
+- **Java:** `import a.b.C;`, `import static`, wildcard `a.b.*`. Resolved by matching the end of the file path (`a/b/C.java`); a wildcard matches every `.java` file in that folder.
+
+The old parser is the earlier version. It was kept only to feed the LLM.
+
+### 1.10 Other things worth knowing about the current design
+
+**Caching**
+- The cache key is the hash of the trimmed URL **exactly as typed**. `…/owner/repo`, `…/owner/repo/`, `…/owner/repo.git` and different letter case all produce different hashes, so each one triggers a fresh analysis.
+- Cached results **never expire**. If a repository gets new commits, the old result is still returned until `ANALYSIS_VERSION` is raised.
+- If the AI step fails, the result is still saved as `completed` with empty M1/M2, and it becomes the cached answer for that URL. Version `3` was introduced to clear exactly this kind of bad cache, and the same thing can happen again (see 2.10).
+- Two requests for the same URL at the same time will **both** run the full analysis. Nothing prevents the duplicate work (`repoUrlHash` is not unique).
+
+**Request handling**
+- `cors()` allows every origin, and there is no rate limiting or authentication. Anyone who can reach the API can start GitHub downloads and LLM calls.
+- Vercel stops a request after **60 seconds**. Downloading a large tarball and making two LLM calls (which have no timeout) can take longer than that.
+- `connectDB()` is not awaited in `server.ts`. Mongoose buffers queries until the connection opens. If the connection fails, `process.exit(1)` runs, including on Vercel.
+- `markActive` and `markCompleted` in the controller are not wrapped in try/catch. If they throw, Express 5's default error handler returns the 500 response.
+
+**Code that is never used**
+- `M3Model` (`ai/model.ts`), `analyzeRepoGraph` (`repograph/index.ts`), `findByRepoUrl` (DAO), `filterDirs` (`github.service.ts`), and all of `types/type.ts`.
+
+**Lists that are defined twice**
+- The list of entry-point filenames exists in both `github.service.ts` and `m2EntryPoint.node.ts`.
+- There are two lists of folders to skip: one in `github.service.ts` and a longer one in `repograph/fetch.ts`.
+
+**Tests**
+- `tests/repograph.test.ts` tests only the M3 graph code (JS/TS aliases and `index` files, Python relative imports, Java imports and annotations, import cycles, unsupported languages, truncation). It checks that `importedBy` is always the exact reverse of `imports`. The controller, the GitHub fetch and the AI layer have no tests.
 
 ---
 
@@ -306,7 +354,7 @@ Nodes call `Model.withStructuredOutput(ZodSchema)`. LangChain sends the schema t
 ### 2.6 The nodes: `ai/nodes/`
 
 **`m1Folder.node.ts`**
-1. Builds the unique folder list from `parsedRepo.sourcePaths`.
+1. Builds the unique folder list from `parsedRepo.sourcePaths`. (The `.filter(boolean)` here uses Zod's `boolean` function, not JavaScript's `Boolean`. It returns a schema object, which is always truthy, so nothing is filtered out. The root folder `""` therefore stays in the list.)
 2. If there are no folders → returns `m1Result: []` with an error.
 3. Otherwise calls the LLM with the system prompt and user prompt → `m1Result = result.folders`.
 4. On error → `m1Result: []` and adds an error to `errors`.
@@ -320,7 +368,8 @@ Nodes call `Model.withStructuredOutput(ZodSchema)`. LangChain sends the schema t
 
 **`combine.node.ts`**
 - Merges `m1Result` and `m2Result` into an `IAnalysisResult`, with an **empty M3**.
-- `success = errors.length === 0`.
+- `success = errors.length === 0`. A single error from **either** node makes the whole AI result count as failed.
+- It adds its own "missing result" messages by pushing directly onto `state.errors`, instead of returning them through the reducer.
 - The real M3 is attached later in `ai.service.ts`.
 
 ### 2.7 How the AI result flows back
@@ -348,6 +397,8 @@ Errors are caught at three levels, so an AI failure cannot crash a request:
 
 Also, `ANALYSIS_VERSION` was raised to `3` so that results cached while the old model was broken (empty M1/M2) are ignored and recomputed.
 
+What these three levels **don't** do: retry a failed call, set a timeout on LLM calls, or keep one module when the other fails (2.10).
+
 ### 2.9 Summary of the AI integration
 
 | Aspect | How it is done |
@@ -362,3 +413,17 @@ Also, `ANALYSIS_VERSION` was raised to `3` so that results cached while the old 
 | Scope of AI | Only M1 and M2 (interpretation). M3 is plain code (facts). |
 | Failure handling | Errors caught at node, graph and service level; M3 is always returned |
 | Entry point into the AI layer | `runAnalysisGraph()`, called only from `services/ai.service.ts` |
+
+### 2.10 Limits of the AI layer (found in the second pass)
+
+These are facts about how the code behaves today. They are not changes.
+
+1. **M1 and M2 are kept or dropped together.** If either node adds an error, `combine` sets `success: false`, and `ai.service` then drops **both** results. Common cases:
+   - The repo has no file named like `server.ts`, `index.js` or `main.py` → M2 adds "No entry candidates found" → a correct M1 is discarded too.
+   - The source files sit at the repo root with no folders → M1 adds "No folders found" → a correct M2 is discarded too.
+2. **Bad results get cached.** When this happens the record is still saved as `completed` with the current `ANALYSIS_VERSION`, so the empty M1/M2 is returned from the cache from then on.
+3. **The LLM sees only part of a large repo.** M1 is based on the first 60 source files **in tarball order**, which is not a ranked sample, and only 30 file paths are put in the prompt. Folders outside those files never reach the LLM.
+4. **M2 sees only the start of each entry file**: the first 800 characters of up to 3 candidates. Setup code further down the file is not shown to the model.
+5. **No retry and no timeout.** A slow or failing NVIDIA API call either uses up the 60-second Vercel limit or turns into a warning.
+6. **The LLM never sees the M3 graph.** M1 and M2 receive only paths and file text. The layers, edges and entry roots that `repograph` computes are not passed to the AI, even though they would give it better context.
+7. **The provider and model are hard-coded.** The base URL and model name are written directly in `ai/model.ts`; only the API key comes from `.env`. Changing the model means changing code.
