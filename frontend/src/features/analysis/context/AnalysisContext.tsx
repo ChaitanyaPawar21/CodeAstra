@@ -1,10 +1,8 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { DashboardData, GraphNode, GraphEdge, TechStack } from '../../../shared/types/dashboard';
 import { mockRepoData } from '../../../shared/data/mockDashboardData';
-
-// Same-origin by default: on Vercel the `/api/*` rewrite routes to the backend
-// service. Set VITE_API_URL (e.g. http://localhost:5000) for bare `vite dev`.
-const API_URL = import.meta.env.VITE_API_URL || '';
+import { API_URL, UNAUTHORIZED_EVENT } from '../../../shared/api/config';
+import { useAuth } from '../../auth/context/AuthContext';
 
 interface AnalysisContextType {
   repoUrl: string;
@@ -206,6 +204,17 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Analysis results belong to whoever ran them: when the signed-in user changes
+  // (logout, session expiry, a different login) drop them so they can't leak across accounts.
+  const { user } = useAuth();
+  const currentUserId = user?.id ?? null;
+  const [dataOwnerId, setDataOwnerId] = useState<string | null>(currentUserId);
+  if (dataOwnerId !== currentUserId) {
+    setDataOwnerId(currentUserId);
+    setAnalysisData(null);
+    setError(null);
+  }
+
   const analyzeRepo = useCallback(async (url: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -214,10 +223,18 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const response = await fetch(`${API_URL}/api/analysis`, {
         method: 'POST',
+        credentials: 'include', // send the HttpOnly auth cookie
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoUrl: url }),
       });
       const json = await response.json().catch(() => null);
+
+      if (response.status === 401) {
+        // Session missing/expired → let AuthContext sign out; the route guard sends them to /login.
+        window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+        setError('Your session has expired. Please log in again.');
+        return false;
+      }
 
       if (!response.ok || !json?.success || !json?.data) {
         const msg = json?.message || json?.errors?.join(' | ') || `Request failed (${response.status})`;

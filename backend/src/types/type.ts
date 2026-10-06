@@ -25,3 +25,14 @@ export type ApiResponse<T> = {
     data?: T;
     error?: string;
 };
+
+
+// --- AUTH ---
+/** Safe, serialisable view of a user. Never contains the password hash. */
+export interface AuthUser {
+    id: string;
+    name: string;
+    email: string;
+    provider: 'local' | 'google';
+    createdAt: Date;
+}

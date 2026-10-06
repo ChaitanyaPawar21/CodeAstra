@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Bell, RefreshCw, ChevronRight } from 'lucide-react';
+import { Bell, RefreshCw, ChevronRight, LogOut } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAnalysis } from '../../../features/analysis/context/AnalysisContext';
+import { useAuth } from '../../../features/auth/context/AuthContext';
 import { navGroups } from './Sidebar';
+import UserAvatar from './userAvatar';
 
 // Resolve the current route to "Group ▸ Page" for the breadcrumb.
 function useBreadcrumb() {
@@ -18,6 +20,7 @@ function useBreadcrumb() {
 export default function Navbar() {
   const navigate = useNavigate();
   const { repoUrl, setRepoUrl } = useAnalysis();
+  const { user, logout } = useAuth();
   const [inputUrl, setInputUrl] = useState(repoUrl);
   const crumb = useBreadcrumb();
 
@@ -31,6 +34,11 @@ export default function Navbar() {
     const url = inputUrl.trim() || repoUrl;
     setRepoUrl(url);
     navigate('/loading');
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -80,10 +88,18 @@ export default function Navbar() {
           <span className="absolute top-1.5 right-1.5 block h-1.5 w-1.5 rounded-full bg-indigo-500 ring-2 ring-[#FBF3C4]" />
         </button>
         <div className="flex items-center gap-2 pl-2 border-l border-black">
-          <div className="h-8 w-8 rounded-full bg-slate-800 border border-black overflow-hidden">
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" />
-          </div>
-          <span className="text-xs font-medium text-slate-300 hidden sm:inline-block">Developer</span>
+          <UserAvatar size={32} />
+          <span className="text-xs font-medium text-slate-300 hidden sm:inline-block max-w-[8rem] truncate" title={user?.email}>
+            {user?.name ?? 'Developer'}
+          </span>
+          <button
+            onClick={handleLogout}
+            title="Log out"
+            aria-label="Log out"
+            className="p-2 text-slate-400 hover:text-black transition-colors rounded-lg hover:bg-black/[0.04]"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
       

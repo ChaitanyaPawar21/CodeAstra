@@ -44,3 +44,17 @@ This allows CodeAstra to maintain user-specific analysis history and restrict ac
 * **OAuth 2.0** provides an additional authentication mechanism.
 * Protected resources are accessible only to authenticated users.
 * Authentication secrets and credentials should be stored securely using environment variables.
+
+---
+
+## Implementation notes
+
+**Flow.** `POST /api/auth/register|login` (or the Google callback) -> server sets an **HttpOnly, SameSite=Lax, Secure-in-production** cookie `codeastra_token` holding a signed JWT (`userId`, `exp`). The browser sends it automatically; `authMiddleware` verifies it (HS256 only), loads the user, and sets `req.user`. `Authorization: Bearer <jwt>` is also accepted for API clients. The token is never readable by frontend JavaScript.
+
+**Endpoints** (`/api/auth`): `POST /register`, `POST /login`, `GET /me` (protected), `POST /logout`, `GET /google`, `GET /google/callback`. `POST /api/analysis` is protected and stores `req.user.id` in `RepoAnalysis.userId`; any `userId` sent in the request body is ignored.
+
+**Google account linking.** Local emails are not verified, so when Google (which *does* verify the email) claims an existing local account, the local password is removed and previously issued tokens are revoked (`tokensValidAfter`). This prevents someone pre-registering a victim's email with a password they know. The legitimate owner continues with Google.
+
+**Setup.** Copy `backend/.env.example` to `backend/.env` and fill in `JWT_SECRET` (required) and the Google values (optional). In development the Vite dev server proxies `/api` to the backend (`vite.config.ts`), and on Vercel the `/api/*` rewrite does the same, so the cookie is first-party in both.
+
+**Tests.** `cd backend && TEST_MONGO_URI=mongodb://127.0.0.1:27017/codeastra_test npm test` runs the auth integration suite (the database is dropped afterwards - use a throwaway DB). Without `TEST_MONGO_URI` those tests are skipped.

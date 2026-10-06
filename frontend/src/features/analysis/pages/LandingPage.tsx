@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, FolderTree, GitBranch, Sparkles } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
 import { useAnalysis } from '../context/AnalysisContext';
+import { useAuth } from '../../auth/context/AuthContext';
 
 const FEATURES = [
   { icon: FolderTree, label: 'Maps your directory structure' },
@@ -13,6 +14,7 @@ const FEATURES = [
 export default function LandingPage() {
   const navigate = useNavigate();
   const { repoUrl, setRepoUrl } = useAnalysis();
+  const { isAuthenticated, user, logout } = useAuth();
   const [inputUrl, setInputUrl] = useState(repoUrl || '');
 
   const handleAnalyze = (e?: React.FormEvent) => {
@@ -33,13 +35,37 @@ export default function LandingPage() {
           </div>
           <span className="font-bold text-lg tracking-tight">CodeAstra</span>
         </div>
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="px-4 py-2 rounded-lg bg-indigo-500 border-2 border-black shadow-md hover:-translate-x-0.5 hover:-translate-y-0.5 transition-transform text-sm font-semibold flex items-center gap-2"
-        >
-          Launch App
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+         {isAuthenticated ? (
+  <>
+    <span className="hidden sm:inline text-sm text-black/60 max-w-[10rem] truncate" title={user?.email}>
+      {user?.name}
+    </span>
+    <button
+      onClick={logout}
+      className="px-4 py-2 rounded-lg text-sm font-semibold hover:underline underline-offset-2"
+    >
+      Log out
+    </button>
+  </>
+) : (
+  <button
+    onClick={() => navigate('/login')}
+    className="px-4 py-2 rounded-lg text-sm font-semibold hover:underline underline-offset-2"
+  >
+    Log in
+  </button>
+)}
+          {!isAuthenticated && (
+            <button
+              onClick={() => navigate('/register')}
+              className="px-4 py-2 rounded-lg bg-indigo-500 border-2 border-black shadow-md hover:-translate-x-0.5 hover:-translate-y-0.5 transition-transform text-sm font-semibold flex items-center gap-2"
+            >
+              Sign up
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Hero — single focus: paste a repo */}

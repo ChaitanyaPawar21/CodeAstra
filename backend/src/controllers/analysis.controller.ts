@@ -4,6 +4,14 @@ import aiService from "../services/ai.service.js";
 import  analysisDAO  from "../dao/analysis.dao.js";
 
 export const analyzeRepo = async (req: Request, res: Response) => {
+  // Identity comes ONLY from the verified JWT (authMiddleware). Any userId the
+  // client puts in the body is ignored.
+  if (!req.user) {
+    res.status(401).json({ success: false, message: "Authentication required." });
+    return;
+  }
+  const userId = req.user.id;
+
   const { repoUrl } = req.body;
 
   if (!repoUrl || typeof repoUrl !== "string") {
@@ -16,7 +24,15 @@ export const analyzeRepo = async (req: Request, res: Response) => {
     .update(cleanUrl)
     .digest("hex");
   try {
-    const cached = await analysisDAO.findByUrlHash(repoUrlHash);
+    // Prefer the caller's own completed analysis; otherwise reuse anyone's
+    // cached result (public repo, same output) but record a copy owned by this user.
+    let cached = await analysisDAO.findByUrlHashForUser(repoUrlHash, userId);
+    if (!cached) {
+      const shared = await analysisDAO.findByUrlHash(repoUrlHash);
+      if (shared) {
+        cached = await analysisDAO.createCompletedCopy(shared, userId, crypto.randomUUID());
+      }
+    }
     if (cached) {
       res.status(200).json({
         success: true,
@@ -34,7 +50,7 @@ export const analyzeRepo = async (req: Request, res: Response) => {
   let record;
   try {
     record = await analysisDAO.create({
-      userId: null,
+      userId,
       repoUrl: cleanUrl,
       repoUrlHash,
       jobId: crypto.randomUUID(),

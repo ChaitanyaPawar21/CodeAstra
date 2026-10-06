@@ -13,8 +13,40 @@ export class AnalysisDAO {
       .exec();
   }
 
+  /** The given user's own completed analysis for this repo, if any. */
+  async findByUrlHashForUser(
+    repoUrlHash: string,
+    userId: string,
+  ): Promise<IRepoAnalysis | null> {
+    return repoAnalysisModel
+      .findOne({ repoUrlHash, userId, status: "completed", analysisVersion: { $gte: ANALYSIS_VERSION } })
+      .exec();
+  }
+
+  /**
+   * Cache hit on someone else's analysis: store a completed copy that belongs to
+   * the requesting user so their history/ownership is correct without re-running the AI.
+   */
+  async createCompletedCopy(
+    source: IRepoAnalysis,
+    userId: string,
+    jobId: string,
+  ): Promise<IRepoAnalysis> {
+    return repoAnalysisModel.create({
+      userId,
+      repoUrl: source.repoUrl,
+      repoUrlHash: source.repoUrlHash,
+      jobId,
+      status: "completed",
+      result: source.toObject().result,
+      analysisVersion: source.analysisVersion,
+      error: null,
+      completedAt: new Date(),
+    });
+  }
+
   async create(data: {
-    userId: null;
+    userId: string;
     repoUrl: string;
     repoUrlHash: string;
     jobId: string;
