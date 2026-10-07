@@ -66,11 +66,32 @@ const layout = (nodes: any[], edges: any[]) => {
   nodes.forEach((n) => g.setNode(n.id, { width: 180, height: 56 }));
   edges.forEach((e) => g.setEdge(e.source, e.target));
   dagre.layout(g);
+
+  // Dagre puts every root/isolated node on one rank -> one huge row. Wrap wide ranks into a grid
+  // so the graph stays roughly square and labels readable at fitView zoom.
+  const cols = Math.max(4, Math.ceil(Math.sqrt(nodes.length * 2)));
+  const centerX = (g.graph().width ?? 0) / 2;
+  const ranks = new Map<number, any[]>();
   nodes.forEach((n) => {
     const p = g.node(n.id);
-    n.position = { x: p.x - 90, y: p.y - 28 };
+    n.position = { x: p.x - 90, y: 0 };
     n.sourcePosition = Position.Bottom;
     n.targetPosition = Position.Top;
+    ranks.set(p.y, [...(ranks.get(p.y) ?? []), n]);
+  });
+  let y = 0;
+  [...ranks.keys()].sort((a, b) => a - b).forEach((rankY) => {
+    const row = ranks.get(rankY)!.sort((a, b) => a.position.x - b.position.x);
+    if (row.length <= cols) {
+      row.forEach((n) => (n.position.y = y));
+      y += 56 + 90;
+      return;
+    }
+    row.forEach((n, i) => {
+      const inRow = Math.min(cols, row.length - Math.floor(i / cols) * cols);
+      n.position = { x: centerX + ((i % cols) - inRow / 2) * 220, y: y + Math.floor(i / cols) * 96 };
+    });
+    y += Math.ceil(row.length / cols) * 96 + 90;
   });
   return nodes;
 };

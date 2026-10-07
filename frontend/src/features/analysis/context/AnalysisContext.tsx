@@ -187,6 +187,7 @@ function transformReal(raw: any, targetUrl: string): DashboardData {
     criticalFiles,
     requestLifecycle: mockRepoData.requestLifecycle, // generic 6-step illustration; not analysis output
     aiInsights,
+    architecture: raw?.architecture ?? null,
     dependencyGraph: {
       nodes,
       edges,

@@ -115,6 +115,23 @@ export interface RepositoryOverview {
   capabilities: string[];
 }
 
+// LLM architecture diagram; every path is validated against the repo by the backend.
+export interface Architecture {
+  overview: string;
+  groups: { id: string; label: string }[];
+  components: {
+    id: string;
+    label: string;
+    role: string;
+    description: string;
+    group: string; // "" = ungrouped
+    shape: 'rect' | 'cylinder' | 'circle' | 'hexagon' | 'stadium';
+    kind: 'ui' | 'api' | 'service' | 'data' | 'external' | 'infra' | 'other';
+    paths: string[];
+  }[];
+  edges: { from: string; to: string; label: string }[];
+}
+
 export interface DashboardData {
   repoUrl: string;
   isSample?: boolean; // true when no real analysis ran (mock/sample data)
@@ -126,6 +143,7 @@ export interface DashboardData {
   criticalFiles: CriticalFile[];
   requestLifecycle: RequestLifecycleStep[];
   aiInsights: AIInsight[];
+  architecture?: Architecture | null; // null when the LLM pass is unavailable
   dependencyGraph: {
     nodes: GraphNode[];
     edges: GraphEdge[];
