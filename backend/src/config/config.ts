@@ -61,6 +61,13 @@ export const config = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
   GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || "",
+
+  // SMTP is optional at startup; password reset endpoints require it.
+  SMTP_HOST: process.env.SMTP_HOST || "",
+  SMTP_PORT: Number(process.env.SMTP_PORT || 587),
+  SMTP_USER: process.env.SMTP_USER || "",
+  SMTP_PASS: process.env.SMTP_PASS || "",
+  SMTP_FROM: process.env.SMTP_FROM || process.env.SMTP_USER || "",
 };
 
 export const isGoogleOAuthConfigured = (): boolean =>
@@ -69,3 +76,6 @@ export const isGoogleOAuthConfigured = (): boolean =>
       config.GOOGLE_CLIENT_SECRET &&
       config.GOOGLE_CALLBACK_URL,
   );
+
+export const isSmtpConfigured = (): boolean =>
+  Boolean(config.SMTP_HOST && config.SMTP_USER && config.SMTP_PASS && config.SMTP_FROM);

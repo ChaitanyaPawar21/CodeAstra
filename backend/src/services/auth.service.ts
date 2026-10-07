@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -185,6 +186,36 @@ export const loginUser = async (input: {
   return { user: toAuthUser(user), token: generateToken(String(user._id)) };
 };
 
+/** Create a single-use password reset token for an existing local account. */
+export const createPasswordReset = async (email: string): Promise<{ token: string; name: string } | null> => {
+  const user = await userModel.findOne({ email: email.toLowerCase() }).select("+password");
+  // Google-only accounts do not have a password to reset.
+  if (!user?.password) return null;
+
+  const token = crypto.randomBytes(32).toString("hex");
+  user.passwordResetTokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
+  await user.save();
+  return { token, name: user.name };
+};
+
+export const resetPassword = async (token: string, password: string): Promise<void> => {
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const user = await userModel.findOne({
+    passwordResetTokenHash: tokenHash,
+    passwordResetExpires: { $gt: new Date() },
+  }).select("+passwordResetTokenHash +passwordResetExpires");
+  if (!user) throw new AuthError("This password reset link is invalid or expired. Request a new one.", 400, "INVALID_RESET_TOKEN");
+
+  user.password = await hashPassword(password);
+  user.passwordResetTokenHash = undefined;
+  user.passwordResetExpires = undefined;
+  // JWT iat has one-second precision; move the cutoff forward so all earlier
+  // sessions are rejected, including tokens issued in the same second.
+  user.tokensValidAfter = new Date(Date.now() + 1000);
+  await user.save();
+};
+
 /**
  * Resolve a verified token to a live user. Rejects tokens for deleted users and
  * tokens issued before the account's credentials were last invalidated.
@@ -283,6 +314,8 @@ export const authService = {
   verifyToken,
   registerUser,
   loginUser,
+  createPasswordReset,
+  resetPassword,
   getUserForToken,
   findOrCreateGoogleUser,
 };

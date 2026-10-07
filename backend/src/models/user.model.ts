@@ -11,6 +11,8 @@ export interface IUser extends Document {
   provider: AuthProvider;
   /** Tokens issued before this instant are rejected (set when credentials are invalidated). */
   tokensValidAfter?: Date;
+  passwordResetTokenHash?: string;
+  passwordResetExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +38,8 @@ const userSchema = new Schema<IUser>(
       required: true,
     },
     tokensValidAfter: { type: Date, required: false, select: false },
+    passwordResetTokenHash: { type: String, required: false, select: false },
+    passwordResetExpires: { type: Date, required: false, select: false },
   },
   {
     timestamps: true,

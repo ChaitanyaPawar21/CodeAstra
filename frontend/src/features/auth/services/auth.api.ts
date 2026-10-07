@@ -65,6 +65,20 @@ export async function login(input: { email: string; password: string }): Promise
   return json.data.user;
 }
 
+export async function requestPasswordReset(email: string): Promise<void> {
+  await request('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await request('/api/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  });
+}
+
 /** Returns the signed-in user, or null when there is no valid session. */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {

@@ -4,8 +4,8 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import { ApiError, startGoogleLogin } from '../services/auth.api';
-import { AuthField, AuthShell, FormError, OrDivider } from './AuthShell';
-import { EMAIL_RE, primaryButton, secondaryButton } from './authStyles';
+import { AuthField, AuthShell, FormError, OrDivider } from '../components/AuthShell';
+import { EMAIL_RE, primaryButton, secondaryButton } from '../components/authStyles';
 
 // `?error=` codes the backend appends when the Google round trip fails.
 const OAUTH_ERRORS: Record<string, string> = {
@@ -88,6 +88,12 @@ export default function Login() {
             </button>
           }
         />
+
+        <div className="-mt-2 text-right">
+          <Link to="/forgot-password" className="text-sm font-semibold underline underline-offset-2">
+            Forgot password?
+          </Link>
+        </div>
 
         <button type="submit" disabled={submitting} className={primaryButton}>
           {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
