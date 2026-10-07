@@ -2,7 +2,8 @@ import crypto from "crypto";
 import type { NextFunction, Request, Response } from "express";
 import passport from "passport";
 import { z } from "zod";
-import { config, isGoogleOAuthConfigured } from "../config/config.js";
+import nodemailer from "nodemailer";
+import { config, isGoogleOAuthConfigured, isSmtpConfigured } from "../config/config.js";
 import authService, {
   AuthError,
   OAUTH_STATE_COOKIE_NAME,
@@ -40,6 +41,12 @@ const loginSchema = z.object({
   email: emailSchema,
   // No strength rules at login — only presence.
   password: z.string({ error: "Password is required" }).min(1, "Password is required"),
+});
+
+const forgotPasswordSchema = z.object({ email: emailSchema });
+const resetPasswordSchema = z.object({
+  token: z.string({ error: "Reset token is required" }).min(1, "Reset token is required"),
+  password: passwordSchema,
 });
 
 const sendValidationError = (res: Response, error: z.ZodError): void => {
@@ -88,6 +95,57 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   } catch (err) {
     handleError(res, err, "Login");
   }
+};
+
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  const parsed = forgotPasswordSchema.safeParse(req.body ?? {});
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  if (!isSmtpConfigured()) {
+    res.status(503).json({ success: false, message: "Password reset email is not configured on this server." });
+    return;
+  }
+
+  try {
+    const reset = await authService.createPasswordReset(parsed.data.email);
+    if (reset) {
+      const transporter = nodemailer.createTransport({
+        host: config.SMTP_HOST,
+        port: config.SMTP_PORT,
+        secure: config.SMTP_PORT === 465,
+        auth: { user: config.SMTP_USER, pass: config.SMTP_PASS },
+      });
+      const link = `${frontendUrl("/reset-password")}?token=${encodeURIComponent(reset.token)}`;
+      await transporter.sendMail({
+        from: config.SMTP_FROM,
+        to: parsed.data.email,
+        subject: "Reset your CodeAstra password",
+        text: `Hi ${reset.name},\n\nUse this link to set a new password. It expires in one hour:\n${link}\n\nIf you did not request this, you can ignore this email.`,
+        html: `<p>Hi ${escapeHtml(reset.name)},</p><p>Use the link below to set a new password. It expires in one hour.</p><p><a href="${link}">Reset your CodeAstra password</a></p><p>If you did not request this, you can ignore this email.</p>`,
+      });
+    }
+    // Same response whether the account exists or not, to prevent email enumeration.
+    res.status(200).json({ success: true, message: "If an account exists for that email, a reset link has been sent." });
+  } catch (err) {
+    handleError(res, err, "Forgot password");
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  const parsed = resetPasswordSchema.safeParse(req.body ?? {});
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    await authService.resetPassword(parsed.data.token, parsed.data.password);
+    res.status(200).json({ success: true, message: "Password updated. You can now log in." });
+  } catch (err) {
+    handleError(res, err, "Reset password");
+  }
+};
+
+const escapeHtml = (value: string): string => {
+  const replacements: Record<string, string> = {
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  };
+  return value.replace(/[&<>"']/g, (char) => replacements[char]);
 };
 
 /** Mounted behind authMiddleware, so req.user is guaranteed. */

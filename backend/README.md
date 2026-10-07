@@ -112,7 +112,16 @@ GOOGLE_API_KEY=your_gemini_api_key_here
 
 # GitHub (Optional, to avoid rate limits)
 GITHUB_TOKEN=your_github_personal_access_token
+
+# Password reset email (SMTP; required only for forgot-password)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-16-character-google-app-password
+SMTP_FROM=CodeAstra <your-email@gmail.com>
 ```
+
+For Gmail, set `SMTP_PASS` to a Google App Password, not your regular account password. Password reset links expire after one hour and can only be used once.
 
 ---
 
