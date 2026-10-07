@@ -4,8 +4,8 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import { ApiError, startGoogleLogin } from '../services/auth.api';
-import { AuthField, AuthShell, FormError, OrDivider } from './AuthShell';
-import { EMAIL_RE, primaryButton, secondaryButton } from './authStyles';
+import { AuthField, AuthShell, FormError, OrDivider } from '../components/AuthShell';
+import { EMAIL_RE, primaryButton, secondaryButton } from '../components/authStyles';
 
 type Errors = Partial<Record<'name' | 'email' | 'password' | 'confirmPassword', string>>;
 

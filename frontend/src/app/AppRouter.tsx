@@ -9,8 +9,8 @@ import ArchitecturePage from '../features/analysis/pages/ArchitecturePage';
 import RepositoryStructurePage from '../features/analysis/pages/RepositoryStructurePage';
 import AIInsightsPage from '../features/analysis/pages/AIInsightsPage';
 import DependencyGraphPage from '../features/analysis/pages/DependencyGraphPage';
-import Login from '../features/auth/components/Login';
-import Register from '../features/auth/components/Register';
+import Login from '../features/auth/pages/Login';
+import Register from '../features/auth/pages/Register';
 import { ProtectedRoute, PublicOnlyRoute } from '../features/auth/components/ProtectedRoute';
 
 export const AppRouter = () => {
