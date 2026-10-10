@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Architecture } from '../../../shared/types/dashboard';
-import { useAnalysis } from '../context/AnalysisContext';
+import { useAnalysis } from '../hooks/useAnalysis';
 
 // One colour per group, cycled (fill, stroke, text) - same scheme as GitDiagram.
 const PALETTE = [

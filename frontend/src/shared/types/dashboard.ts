@@ -141,7 +141,7 @@ export interface DashboardData {
   folderHierarchy: FolderHierarchyNode[];
   entryPoints: EntryPointStep[];
   criticalFiles: CriticalFile[];
-  requestLifecycle: RequestLifecycleStep[];
+  requestLifecycle?: RequestLifecycleStep[];
   aiInsights: AIInsight[];
   architecture?: Architecture | null; // null when the LLM pass is unavailable
   dependencyGraph: {
