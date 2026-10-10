@@ -1,7 +1,7 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import { useAnalysis } from '../../../features/analysis/context/AnalysisContext';
+import { useAnalysis } from '../../../features/analysis/hooks/useAnalysis';
 
 export default function MainLayout() {
   const { analysisData } = useAnalysis();

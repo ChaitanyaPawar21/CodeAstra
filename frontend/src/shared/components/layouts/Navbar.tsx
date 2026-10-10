@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bell, RefreshCw, ChevronRight, LogOut } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAnalysis } from '../../../features/analysis/context/AnalysisContext';
+import { useAnalysis } from '../../../features/analysis/hooks/useAnalysis';
 import { useAuth } from '../../../features/auth/context/AuthContext';
 import { navGroups } from './Sidebar';
 import UserAvatar from './userAvatar';
@@ -32,6 +32,7 @@ export default function Navbar() {
   const handleReanalyze = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const url = inputUrl.trim() || repoUrl;
+    if (!url) return;
     setRepoUrl(url);
     navigate('/loading');
   };
