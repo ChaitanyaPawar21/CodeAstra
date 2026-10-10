@@ -11,7 +11,7 @@ export default function MainLayout() {
   if (!analysisData) return <Navigate to="/" replace />;
 
   return (
-    <div className="flex h-screen bg-[#FBF3C4] overflow-hidden text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div className="flex h-screen bg-[#FBF3C4] overflow-hidden text-slate-900 selection:bg-indigo-500/30 selection:text-black">
       <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <Navbar />
