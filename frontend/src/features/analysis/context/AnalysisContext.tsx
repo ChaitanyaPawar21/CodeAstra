@@ -1,19 +1,25 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { DashboardData, GraphNode, GraphEdge, TechStack } from '../../../shared/types/dashboard';
-import { mockRepoData } from '../../../shared/data/mockDashboardData';
-import { API_URL, UNAUTHORIZED_EVENT } from '../../../shared/api/config';
 import { useAuth } from '../../auth/context/AuthContext';
+import type { RawAnalysisData } from '../services/analysis.api';
 
-interface AnalysisContextType {
+export interface AnalysisContextType {
   repoUrl: string;
   setRepoUrl: (url: string) => void;
   analysisData: DashboardData | null;
+  setAnalysisData: (data: DashboardData | null) => void;
   isLoading: boolean;
+  setIsLoading: (loading: boolean) => void;
   error: string | null;
-  analyzeRepo: (url: string) => Promise<boolean>;
+  setError: (error: string | null) => void;
+  resetAnalysis: () => void;
+  // Shared request tracking refs to prevent race conditions across all hook consumers
+  activeRequestIdRef: React.MutableRefObject<number>;
+  abortControllerRef: React.MutableRefObject<AbortController | null>;
+  currentUserId: string | null;
 }
 
-const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined);
+export const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined);
 
 function parseGitHubUrl(url: string) {
   const clean = url.trim().replace(/\/$/, '');
@@ -40,15 +46,25 @@ const runCmdFor = (lang: string) =>
 const installCmdFor = (lang: string) =>
   lang === 'py' ? 'pip install -r requirements.txt' : lang === 'java' ? './mvnw install' : 'npm install';
 
-// Map the backend v2 result (m1/m2/m3) into DashboardData — all derived, never fabricated.
-function transformReal(raw: any, targetUrl: string): DashboardData {
+/**
+ * Deterministically maps raw backend analysis output (m1, m2, m3) into typed DashboardData.
+ */
+export function transformReal(raw: RawAnalysisData | any, targetUrl: string): DashboardData {
   const { name, fullName } = parseGitHubUrl(targetUrl);
   const m1 = Array.isArray(raw?.m1) ? raw.m1 : [];
   const m2 = raw?.m2 ?? null;
   const m3 = raw?.m3 ?? {};
   const files: Record<string, any> = m3.files ?? {};
   const ids = Object.keys(files);
-  const stats = m3.stats ?? { files: ids.length, parsed: ids.length, edges: (m3.edges ?? []).length, unresolved: 0, truncated: false, truncatedReason: null, unsupportedLanguages: [] };
+  const stats = m3.stats ?? {
+    files: ids.length,
+    parsed: ids.length,
+    edges: (m3.edges ?? []).length,
+    unresolved: 0,
+    truncated: false,
+    truncatedReason: null,
+    unsupportedLanguages: [],
+  };
 
   // --- dependency graph (real) ---
   const cycleOf = new Map<string, number>();
@@ -85,7 +101,9 @@ function transformReal(raw: any, targetUrl: string): DashboardData {
   }
   const langsByFreq = [...langCount.entries()].sort((a, b) => b[1] - a[1]).map(([l]) => l);
   const primaryLang = langsByFreq[0] ?? 'ts';
-  const techStack: TechStack[] = langsByFreq.slice(0, 4).map((l) => LANG_META[l] ?? { name: l, color: 'text-slate-300 bg-slate-500/10 border-slate-500/20' });
+  const techStack: TechStack[] = langsByFreq
+    .slice(0, 4)
+    .map((l) => LANG_META[l] ?? { name: l, color: 'text-slate-300 bg-slate-500/10 border-slate-500/20' });
 
   // --- folders (prefer m1, else derive top-level dirs with real counts) ---
   const dirCount = new Map<string, number>();
@@ -101,11 +119,14 @@ function transformReal(raw: any, targetUrl: string): DashboardData {
         filesCount: ids.filter((id) => (files[id].path as string).startsWith(item.path)).length,
         isStarred: item.type === 'entry',
       }))
-    : [...dirCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([dir, count]) => ({
-        name: dir,
-        explanation: `${count} file${count === 1 ? '' : 's'}`,
-        filesCount: count,
-      }));
+    : [...dirCount.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([dir, count]) => ({
+          name: dir,
+          explanation: `${count} file${count === 1 ? '' : 's'}`,
+          filesCount: count,
+        }));
 
   // --- entry points (prefer m2, else entry-layer files) ---
   const entryNodes = nodes.filter((n) => n.type === 'entry');
@@ -127,7 +148,7 @@ function transformReal(raw: any, targetUrl: string): DashboardData {
       isStarred: i < 2,
     }));
 
-  // --- AI insights derived from graph structure (no templated per-file text) ---
+  // --- AI insights derived from graph structure ---
   const mostImported = criticalFiles[0];
   const aiInsights = [
     mostImported && {
@@ -137,16 +158,22 @@ function transformReal(raw: any, targetUrl: string): DashboardData {
       colorTheme: 'blue' as const,
     },
     {
-      title: (m3.cycles?.length ?? 0) > 0 ? `${m3.cycles.length} circular dependency group(s)` : 'No circular dependencies',
-      description: (m3.cycles?.length ?? 0) > 0
-        ? 'Import cycles detected — shown as dashed red edges in the graph.'
-        : 'No import cycles were found in the resolved graph.',
+      title:
+        (m3.cycles?.length ?? 0) > 0
+          ? `${m3.cycles.length} circular dependency group(s)`
+          : 'No circular dependencies',
+      description:
+        (m3.cycles?.length ?? 0) > 0
+          ? 'Import cycles detected — shown as dashed red edges in the graph.'
+          : 'No import cycles were found in the resolved graph.',
       iconType: 'risk' as const,
       colorTheme: (m3.cycles?.length ?? 0) > 0 ? ('red' as const) : ('cyan' as const),
     },
     {
       title: 'Graph coverage',
-      description: `${stats.parsed}/${stats.files} files parsed, ${stats.edges} edges, ${stats.unresolved} unresolved import(s)${stats.unsupportedLanguages.length ? `; unsupported: ${stats.unsupportedLanguages.join(', ')}` : ''}.`,
+      description: `${stats.parsed}/${stats.files} files parsed, ${stats.edges} edges, ${stats.unresolved} unresolved import(s)${
+        stats.unsupportedLanguages.length ? `; unsupported: ${stats.unsupportedLanguages.join(', ')}` : ''
+      }.`,
       iconType: 'module' as const,
       colorTheme: 'purple' as const,
     },
@@ -162,7 +189,11 @@ function transformReal(raw: any, targetUrl: string): DashboardData {
       techStack,
       totalFiles: stats.files,
       complexity: avgFanout,
-      description: m2?.description || `Deterministic dependency analysis of ${fullName}: ${stats.files} files, ${stats.edges} import edges, ${m3.cycles?.length ?? 0} cycle group(s).`,
+      description:
+        m2?.description ||
+        `Deterministic dependency analysis of ${fullName}: ${stats.files} files, ${stats.edges} import edges, ${
+          m3.cycles?.length ?? 0
+        } cycle group(s).`,
       bulletPoints: [
         `Target: ${fullName}`,
         `Primary language: ${LANG_META[primaryLang]?.name ?? primaryLang}`,
@@ -185,7 +216,7 @@ function transformReal(raw: any, targetUrl: string): DashboardData {
     folderHierarchy,
     entryPoints,
     criticalFiles,
-    requestLifecycle: mockRepoData.requestLifecycle, // generic 6-step illustration; not analysis output
+    requestLifecycle: [],
     aiInsights,
     architecture: raw?.architecture ?? null,
     dependencyGraph: {
@@ -198,69 +229,85 @@ function transformReal(raw: any, targetUrl: string): DashboardData {
     },
   };
 }
-
 export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [repoUrl, setRepoUrl] = useState<string>('https://github.com/facebook/react');
+  const [repoUrl, setRepoUrl] = useState<string>('');
   const [analysisData, setAnalysisData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Analysis results belong to whoever ran them: when the signed-in user changes
-  // (logout, session expiry, a different login) drop them so they can't leak across accounts.
+  // Shared request tracking refs across all hook consumers
+  const activeRequestIdRef = useRef<number>(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // User session isolation: when the authenticated user identity changes (e.g., logout or
+  // switching accounts), immediately abort any in-flight request, increment request counter
+  // to discard late responses, and wipe analysis data so it never leaks across accounts.
   const { user } = useAuth();
   const currentUserId = user?.id ?? null;
   const [dataOwnerId, setDataOwnerId] = useState<string | null>(currentUserId);
-  if (dataOwnerId !== currentUserId) {
-    setDataOwnerId(currentUserId);
-    setAnalysisData(null);
-    setError(null);
-  }
 
-  const analyzeRepo = useCallback(async (url: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    setRepoUrl(url);
-
-    try {
-      const response = await fetch(`${API_URL}/api/analysis`, {
-        method: 'POST',
-        credentials: 'include', // send the HttpOnly auth cookie
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl: url }),
-      });
-      const json = await response.json().catch(() => null);
-
-      if (response.status === 401) {
-        // Session missing/expired → let AuthContext sign out; the route guard sends them to /login.
-        window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
-        setError('Your session has expired. Please log in again.');
-        return false;
+  useEffect(() => {
+    if (dataOwnerId !== currentUserId) {
+      setDataOwnerId(currentUserId);
+      // Abort in-flight network call immediately
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
-
-      if (!response.ok || !json?.success || !json?.data) {
-        const msg = json?.message || json?.errors?.join(' | ') || `Request failed (${response.status})`;
-        setError(msg);
-        return false;
-      }
-      setAnalysisData(transformReal(json.data, url));
-      return true;
-    } catch (err: any) {
-      setError(err?.message || 'Could not reach the analysis backend.');
-      return false;
-    } finally {
+      // Invalidate any resolving promise
+      activeRequestIdRef.current++;
+      // Clear all analysis data and errors
+      setAnalysisData(null);
+      setError(null);
       setIsLoading(false);
     }
+  }, [currentUserId, dataOwnerId]);
+
+  // Clean up any pending abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
   }, []);
 
-  return (
-    <AnalysisContext.Provider value={{ repoUrl, setRepoUrl, analysisData, isLoading, error, analyzeRepo }}>
-      {children}
-    </AnalysisContext.Provider>
+  const resetAnalysis = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    activeRequestIdRef.current++;
+    setAnalysisData(null);
+    setError(null);
+    setIsLoading(false);
+  }, []);
+
+  const value = useMemo<AnalysisContextType>(
+    () => ({
+      repoUrl,
+      setRepoUrl,
+      analysisData,
+      setAnalysisData,
+      isLoading,
+      setIsLoading,
+      error,
+      setError,
+      resetAnalysis,
+      activeRequestIdRef,
+      abortControllerRef,
+      currentUserId,
+    }),
+    [repoUrl, analysisData, isLoading, error, resetAnalysis, currentUserId]
   );
+
+  return <AnalysisContext.Provider value={value}>{children}</AnalysisContext.Provider>;
 };
 
-export const useAnalysis = () => {
+export const useAnalysisContext = (): AnalysisContextType => {
   const context = useContext(AnalysisContext);
-  if (!context) throw new Error('useAnalysis must be used within an AnalysisProvider');
+  if (!context) throw new Error('useAnalysisContext must be used within an AnalysisProvider');
   return context;
 };
+

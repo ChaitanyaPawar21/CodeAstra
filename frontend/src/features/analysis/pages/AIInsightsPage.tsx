@@ -1,7 +1,7 @@
 
 import { motion } from 'framer-motion';
 import { AlertTriangle, Lightbulb, Activity, ArrowRight, Sparkles } from 'lucide-react';
-import { useAnalysis } from '../context/AnalysisContext';
+import { useAnalysis } from '../hooks/useAnalysis';
 
 export default function AIInsightsPage() {
   const { analysisData } = useAnalysis();

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, FolderTree, GitBranch, Sparkles } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
-import { useAnalysis } from '../context/AnalysisContext';
+import { useAnalysis } from '../hooks/useAnalysis';
 import { useAuth } from '../../auth/context/AuthContext';
 
 const FEATURES = [
@@ -16,10 +16,16 @@ export default function LandingPage() {
   const { repoUrl, setRepoUrl } = useAnalysis();
   const { isAuthenticated, user, logout } = useAuth();
   const [inputUrl, setInputUrl] = useState(repoUrl || '');
+  const [inputError, setInputError] = useState<string | null>(null);
 
   const handleAnalyze = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const targetUrl = inputUrl.trim() || 'https://github.com/facebook/react';
+    const targetUrl = inputUrl.trim();
+    if (!targetUrl) {
+      setInputError('Please enter a valid GitHub repository URL.');
+      return;
+    }
+    setInputError(null);
     setRepoUrl(targetUrl);
     navigate('/loading');
   };
@@ -79,29 +85,38 @@ export default function LandingPage() {
 
         <form
           onSubmit={handleAnalyze}
-          className="w-full flex flex-col sm:flex-row items-stretch gap-3 mb-5"
+          className="w-full flex flex-col sm:flex-row items-stretch gap-3 mb-2"
         >
           <div className="flex-1 flex items-center bg-[#FFFBE0] rounded-lg border-2 border-black shadow-md px-4">
             <FaGithub className="w-5 h-5 shrink-0" />
             <input
               type="text"
               value={inputUrl}
-              onChange={(e) => setInputUrl(e.target.value)}
-              placeholder="github.com/facebook/react"
+              onChange={(e) => {
+                setInputUrl(e.target.value);
+                if (inputError) setInputError(null);
+              }}
+              placeholder="https://github.com/owner/repository"
               className="flex-1 bg-transparent border-none text-black px-3 py-3.5 focus:outline-none text-sm placeholder-black/40 font-mono"
             />
           </div>
           <button
             type="submit"
-            className="px-6 py-3.5 bg-indigo-500 border-2 border-black shadow-md hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 transition-transform rounded-lg text-sm font-bold flex items-center justify-center gap-2"
+            className="px-6 py-3.5 bg-indigo-500 border-2 border-black shadow-md hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 transition-transform rounded-lg text-sm font-bold flex items-center justify-center gap-2 shrink-0"
           >
             Analyze
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
+        {inputError && (
+          <p className="text-xs text-rose-600 font-mono mb-4 text-left w-full pl-1">
+            {inputError}
+          </p>
+        )}
+
         {/* Three plain features — no mockups, no clutter */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-2 text-sm text-black/70">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-2 text-sm text-black/70 mt-6">
           {FEATURES.map(({ icon: Icon, label }) => (
             <span key={label} className="flex items-center gap-2">
               <Icon className="w-4 h-4" />

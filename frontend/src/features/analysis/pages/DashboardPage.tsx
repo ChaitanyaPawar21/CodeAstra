@@ -1,6 +1,6 @@
 import { FolderTree, Code2, GitBranch, Layers, Sparkles, MessageSquare, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAnalysis } from '../context/AnalysisContext';
+import { useAnalysis } from '../hooks/useAnalysis';
 
 const EXPLORE = [
   { to: '/repository', icon: FolderTree, title: 'Repository Structure', desc: 'Browse the file tree and how it is organized' },
@@ -25,8 +25,8 @@ export default function DashboardPage() {
   const stats = [
     { label: 'Total files', value: summary.totalFiles },
     { label: 'Complexity', value: summary.complexity },
-    { label: 'Framework', value: 'React 18' },
-    { label: 'Build tool', value: 'Vite' },
+    { label: 'Dependencies', value: data.dependencyGraph.edges?.length ?? 0 },
+    { label: 'Primary language', value: summary.techStack[0]?.name || 'N/A' },
   ];
 
   return (

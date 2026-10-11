@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAnalysis } from '../context/AnalysisContext';
+import { useAnalysis } from '../hooks/useAnalysis';
 
 const STEPS = ['Cloning', 'Parsing', 'Dependency Graph', 'Entry Points', 'AI Insights'];
 const STEP_DURATION = 600; // ms per step
@@ -22,6 +22,11 @@ export default function LoadingPage() {
         return next;
       });
     }, STEP_DURATION);
+
+    if (!repoUrl) {
+      navigate('/', { replace: true });
+      return;
+    }
 
     // Navigate only once the analysis actually resolves (analyzeRepo never
     // rejects — it stores failures in the error state), not on a blind timer.

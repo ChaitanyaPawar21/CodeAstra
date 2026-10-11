@@ -36,15 +36,15 @@ export default function Sidebar() {
           CA
         </div>
         <div className="flex flex-col leading-tight">
-          <span className="font-semibold text-sm tracking-tight text-slate-100">CodeAstra</span>
-          <span className="text-[10px] text-slate-400 font-mono">Repository Intelligence</span>
+          <span className="font-semibold text-sm tracking-tight text-black">CodeAstra</span>
+          <span className="text-[10px] text-black/50 font-mono">Repository Intelligence</span>
         </div>
       </div>
 
       <nav className="flex-1 w-full flex flex-col gap-6 px-3 overflow-y-auto">
         {navGroups.map((group) => (
           <div key={group.label} className="flex flex-col gap-1">
-            <span className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            <span className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-black/40">
               {group.label}
             </span>
             {group.items.map((item) => (
@@ -53,7 +53,7 @@ export default function Sidebar() {
                 to={item.path}
                 className={({ isActive }) =>
                   `relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
-                    isActive ? 'text-black' : 'text-slate-400 hover:text-slate-200 hover:bg-black/[0.04]'
+                    isActive ? 'text-black' : 'text-black/50 hover:text-black hover:bg-black/[0.04]'
                   }`
                 }
               >
@@ -78,7 +78,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto pt-3 px-3 border-t border-black">
-        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-slate-200 hover:bg-black/[0.04] transition-colors">
+        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-black/50 hover:text-black hover:bg-black/[0.04] transition-colors">
           <Settings className="w-[18px] h-[18px]" />
           <span className="font-medium">Settings</span>
         </button>

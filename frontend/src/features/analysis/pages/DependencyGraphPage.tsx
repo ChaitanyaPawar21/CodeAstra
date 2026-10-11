@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import dagre from 'dagre';
 import { X, AlertTriangle, FileCode, Layers, Folder, GitMerge, Package } from 'lucide-react';
 import type { GraphNode as GNode } from '../../../shared/types/dashboard';
-import { useAnalysis } from '../context/AnalysisContext';
+import { useAnalysis } from '../hooks/useAnalysis';
 
 const FOLDER_THRESHOLD = 150; // collapse file view by folder past this many nodes
 
