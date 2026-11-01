@@ -44,6 +44,8 @@ export const config = {
   MONGO_URI: process.env.MONGO_URI,
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
   NVIDIA_API_KEY: process.env.NVIDIA_API_KEY || "",
+  groqApiKey: process.env.GROQ_API_KEY,
+  aiModel: process.env.AI_MODEL,
 
   NODE_ENV: process.env.NODE_ENV || "development",
   IS_PRODUCTION: isProduction,
