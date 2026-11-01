@@ -100,7 +100,7 @@ export default function Register() {
           label="Email"
           type="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder="abc@gmail.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           error={fieldErrors.email}
