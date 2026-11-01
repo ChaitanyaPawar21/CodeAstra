@@ -90,7 +90,7 @@ export default function Register() {
           label="Name"
           type="text"
           autoComplete="name"
-          placeholder="Ada Lovelace"
+          placeholder="Enter your name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={fieldErrors.name}
