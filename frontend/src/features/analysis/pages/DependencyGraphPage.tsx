@@ -102,7 +102,9 @@ type View = 'layered' | 'file';
 export default function DependencyGraphPage() {
   const { analysisData } = useAnalysis();
   const graph = analysisData!.dependencyGraph;
-  const allNodes = (graph.nodes || []) as GNode[];
+  // Stable identity: `|| []` would be a fresh array every render, invalidating
+  // every useMemo below it — including the dagre layout.
+  const allNodes = useMemo(() => (graph.nodes || []) as GNode[], [graph.nodes]);
   const stats = graph.stats;
 
   const [view, setView] = useState<View>('file');

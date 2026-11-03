@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Bell, RefreshCw, ChevronRight, LogOut } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAnalysis } from '../../../features/analysis/hooks/useAnalysis';
 import { useAuth } from '../../../features/auth/context/AuthContext';
-import { navGroups } from './Sidebar';
+import { navGroups } from './navGroups';
 import UserAvatar from './userAvatar';
 
 // Resolve the current route to "Group ▸ Page" for the breadcrumb.
@@ -24,10 +24,14 @@ export default function Navbar() {
   const [inputUrl, setInputUrl] = useState(repoUrl);
   const crumb = useBreadcrumb();
 
-  // Keep input in sync if repoUrl changes externally (e.g. initial context load)
-  useEffect(() => {
+  // Keep the input in sync when repoUrl changes externally (e.g. initial context
+  // load). Adjusted during render rather than in an effect: an effect would
+  // render once with the stale value and cascade a second render.
+  const [syncedUrl, setSyncedUrl] = useState(repoUrl);
+  if (repoUrl !== syncedUrl) {
+    setSyncedUrl(repoUrl);
     setInputUrl(repoUrl);
-  }, [repoUrl]);
+  }
 
   const handleReanalyze = (e?: React.FormEvent) => {
     if (e) e.preventDefault();

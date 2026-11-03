@@ -135,7 +135,9 @@ export default function CodeAnalysisPage() {
   const cleanRepoUrl = repoUrl.trim().replace(/\/+$/, '').replace(/\.git$/, '');
 
   const criticalFiles = analysisData?.criticalFiles ?? [];
-  const nodes = analysisData?.dependencyGraph?.nodes ?? [];
+  // Stable identities: `?? []` would hand useMemo a fresh array every render and
+  // rebuild the whole tree on each keystroke.
+  const nodes = useMemo(() => analysisData?.dependencyGraph?.nodes ?? [], [analysisData]);
 
   const defaultFileName = criticalFiles[0]?.name || nodes[0]?.label || 'README.md';
   const [selectedFileName, setSelectedFileName] = useState(defaultFileName);
