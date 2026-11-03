@@ -82,13 +82,13 @@ export default function LoadingPage() {
             <span className="text-xs text-slate-400 ml-2 font-mono">Terminal Engine</span>
           </div>
           <div className="p-4 font-mono text-xs text-slate-400 h-44 overflow-y-auto space-y-1.5 bg-[#FBF3C4]">
-            <p><span className="text-blue-600">[INFO]</span> Connecting to repository {cleanRepoName}...</p>
-            {stepIndex >= 1 && <p><span className="text-emerald-600">[SUCCESS]</span> Fetched tree hierarchy</p>}
-            {stepIndex >= 2 && <p><span className="text-blue-600">[INFO]</span> Extracting package configuration and language stack...</p>}
-            {stepIndex >= 3 && <p><span className="text-blue-600">[INFO]</span> Mapping component relationships & entry points...</p>}
-            {stepIndex >= 3 && <p className="text-emerald-600">[SUCCESS] Generated runtime dependency graph</p>}
+            <p><span className="text-blue-700">[INFO]</span> Connecting to repository {cleanRepoName}...</p>
+            {stepIndex >= 1 && <p><span className="text-emerald-700">[SUCCESS]</span> Fetched tree hierarchy</p>}
+            {stepIndex >= 2 && <p><span className="text-blue-700">[INFO]</span> Extracting package configuration and language stack...</p>}
+            {stepIndex >= 3 && <p><span className="text-blue-700">[INFO]</span> Mapping component relationships & entry points...</p>}
+            {stepIndex >= 3 && <p className="text-emerald-700">[SUCCESS] Generated runtime dependency graph</p>}
             {failed ? (
-              <p className="text-red-500 font-semibold">[ERROR] {error || 'Analysis failed.'}</p>
+              <p className="text-red-700 font-semibold">[ERROR] {error || 'Analysis failed.'}</p>
             ) : (
               <p className="text-slate-500 animate-pulse">_ Processing… large repos can take 1–2 minutes</p>
             )}

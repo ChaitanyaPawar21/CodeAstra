@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   ReactFlow, Background, Controls, MiniMap, MarkerType, Position, Handle,
-  useNodesState, useEdgesState,
+  useNodesState, useEdgesState, type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +11,7 @@ import type { GraphNode as GNode } from '../../../shared/types/dashboard';
 import { useAnalysis } from '../hooks/useAnalysis';
 
 const FOLDER_THRESHOLD = 150; // collapse file view by folder past this many nodes
+const FIT = { padding: 0.3 };
 
 const colorMap: Record<string, string> = {
   entry: 'bg-rose-200 border-rose-500 text-rose-900',
@@ -49,7 +50,7 @@ const GraphCard = ({ data }: any) => {
     >
       <Handle type="target" position={Position.Top} className="!bg-transparent !border-none" />
       <div className="flex flex-col items-center gap-0.5 min-w-[90px] max-w-[200px]">
-        <span className="text-[8px] uppercase tracking-widest font-bold opacity-70">{data.type}{data.count ? ` · ${data.count}` : ''}</span>
+        <span className="text-[9px] uppercase tracking-widest font-bold opacity-90">{data.type}{data.count ? ` · ${data.count}` : ''}</span>
         <span className="text-[11px] font-mono font-semibold truncate max-w-[190px]">{data.title}</span>
       </div>
       <Handle type="source" position={Position.Bottom} className="!bg-transparent !border-none" />
@@ -101,13 +102,17 @@ type View = 'layered' | 'file';
 export default function DependencyGraphPage() {
   const { analysisData } = useAnalysis();
   const graph = analysisData!.dependencyGraph;
-  const allNodes = (graph.nodes || []) as GNode[];
+  // Stable identity: `|| []` would be a fresh array every render, invalidating
+  // every useMemo below it — including the dagre layout.
+  const allNodes = useMemo(() => (graph.nodes || []) as GNode[], [graph.nodes]);
   const stats = graph.stats;
 
   const [view, setView] = useState<View>('file');
   const [layerFilter, setLayerFilter] = useState<Set<string>>(new Set());
   const [langFilter, setLangFilter] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const rfRef = useRef<ReactFlowInstance | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   const layers = useMemo(() => [...new Set(allNodes.map((n) => n.type))], [allNodes]);
   const languages = useMemo(() => [...new Set(allNodes.map((n) => n.language).filter(Boolean))] as string[], [allNodes]);
@@ -214,6 +219,29 @@ export default function DependencyGraphPage() {
 
   const selectedFile = selectedId && !selectedId.startsWith('L:') && !selectedId.startsWith('D:') ? nodeById.get(selectedId) : null;
 
+  // `fitView` is an init-only prop. Without this the Layers view (1 node, laid
+  // out at 0,0) kept the file view's viewport and rendered entirely off-canvas.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => rfRef.current?.fitView({ ...FIT, duration: 250 }));
+    return () => cancelAnimationFrame(id);
+  }, [base]);
+
+  // The detail panel is a flex sibling, so opening it really shrinks the canvas
+  // — over the node you just clicked. Refit on the resize rather than on the
+  // click: the panel springs in over ~400ms, so firing on state change refits
+  // against the old width. Trailing debounce because the spring resizes ~60×.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    let t: number | undefined;
+    const ro = new ResizeObserver(() => {
+      clearTimeout(t);
+      t = window.setTimeout(() => rfRef.current?.fitView({ ...FIT, duration: 250 }), 150);
+    });
+    ro.observe(el);
+    return () => { clearTimeout(t); ro.disconnect(); };
+  }, []);
+
   const toggle = (set: Set<string>, setter: (s: Set<string>) => void, v: string) => {
     const next = new Set(set);
     if (next.has(v)) next.delete(v); else next.add(v);
@@ -221,10 +249,13 @@ export default function DependencyGraphPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-80px)] w-full flex flex-col gap-3">
+    // h-full, not calc(100vh - magic): <main> is already a bounded flex child,
+    // and the old 80px guess ignored its p-4/md:p-6 padding, so the card's
+    // bottom border + minimap fell below the fold.
+    <div className="h-full w-full flex flex-col gap-3">
       {/* Banners */}
       {stats?.truncated && (
-        <div className="shrink-0 rounded-lg border border-orange-500/40 bg-orange-500/10 px-4 py-2 text-xs text-orange-200 flex items-center gap-2">
+        <div className="shrink-0 rounded-lg border border-orange-500/40 bg-orange-500/10 px-4 py-2 text-xs text-orange-900 flex items-center gap-2">
           <AlertTriangle className="w-3.5 h-3.5" /> Repository truncated: {stats.truncatedReason}
         </div>
       )}
@@ -242,18 +273,18 @@ export default function DependencyGraphPage() {
               <button onClick={() => { setView('layered'); setSelectedId(null); }} className={`px-3 py-1 flex items-center gap-1 ${view === 'layered' ? 'bg-indigo-500 text-black' : 'text-black'}`}><Layers className="w-3 h-3" /> Layers</button>
               <button onClick={() => { setView('file'); setSelectedId(null); }} className={`px-3 py-1 flex items-center gap-1 ${view === 'file' ? 'bg-indigo-500 text-black' : 'text-black'}`}><FileCode className="w-3 h-3" /> Files</button>
             </div>
-            <span className="text-black/40">·</span>
+            <span className="text-black/60">·</span>
             <div className="flex flex-wrap gap-1">
               {layers.map((l) => (
                 <button key={l} onClick={() => toggle(layerFilter, setLayerFilter, l)}
-                  className={`px-2 py-0.5 rounded border font-mono ${layerFilter.has(l) || layerFilter.size === 0 ? colorMap[l] || colorMap.other : 'bg-transparent border-black/20 text-black/40'}`}>
+                  className={`px-2 py-0.5 rounded border font-mono ${layerFilter.has(l) || layerFilter.size === 0 ? colorMap[l] || colorMap.other : 'bg-transparent border-black/20 text-black/60'}`}>
                   {l}
                 </button>
               ))}
             </div>
             {languages.length > 1 && (
               <>
-                <span className="text-black/40">·</span>
+                <span className="text-black/60">·</span>
                 <div className="flex flex-wrap gap-1">
                   {languages.map((l) => (
                     <button key={l} onClick={() => toggle(langFilter, setLangFilter, l)}
@@ -269,16 +300,20 @@ export default function DependencyGraphPage() {
             )}
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div ref={canvasRef} className="flex-1 min-h-0">
             <ReactFlow
               nodes={nodes} edges={edges} nodeTypes={nodeTypes}
               onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-              onNodeClick={onNodeClick} onPaneClick={onPaneClick}
-              fitView fitViewOptions={{ padding: 0.3 }} minZoom={0.05} maxZoom={2}
+              onNodeClick={onNodeClick} onPaneClick={onPaneClick} onInit={(i: ReactFlowInstance) => { rfRef.current = i; }}
+              fitView fitViewOptions={FIT} minZoom={0.05} maxZoom={2}
             >
               <Background color="rgba(0,0,0,0.06)" gap={24} size={1} />
               <Controls className="!bg-[#FFFBE0] !border !border-black" />
-              <MiniMap className="!bg-[#FFFBE0] !border !border-black" nodeColor="#E8BE28" maskColor="rgba(0,0,0,0.1)" pannable zoomable />
+              {/* Overlay minimap hides nodes in the bottom-right corner; only
+                  worth that cost once the graph is too big to take in at once. */}
+              {allNodes.length > 30 && (
+                <MiniMap className="!bg-[#FFFBE0] !border !border-black" nodeColor="#E8BE28" maskColor="rgba(0,0,0,0.1)" pannable zoomable />
+              )}
             </ReactFlow>
           </div>
         </div>
@@ -315,20 +350,20 @@ export default function DependencyGraphPage() {
 
 const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div>
-    <div className="text-[10px] uppercase tracking-wider font-bold text-black/50 mb-0.5">{label}</div>
+    <div className="text-[10px] uppercase tracking-wider font-bold text-black/60 mb-0.5">{label}</div>
     <div className="font-mono break-all">{children}</div>
   </div>
 );
 
 const List = ({ title, items, empty, icon }: { title: string; items: string[]; empty: string; icon?: boolean }) => (
   <div>
-    <div className="text-[10px] uppercase tracking-wider font-bold text-black/50 mb-1 flex items-center gap-1">
+    <div className="text-[10px] uppercase tracking-wider font-bold text-black/60 mb-1 flex items-center gap-1">
       {icon ? <Package className="w-3 h-3" /> : <GitMerge className="w-3 h-3" />} {title}
     </div>
     {items.length ? (
       <div className="flex flex-col gap-1">
         {items.map((it, i) => <div key={`${it}-${i}`} className="font-mono bg-black/5 border border-black/10 rounded px-2 py-1 break-all">{it}</div>)}
       </div>
-    ) : <div className="italic text-black/40">{empty}</div>}
+    ) : <div className="italic text-black/60">{empty}</div>}
   </div>
 );

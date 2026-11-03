@@ -246,22 +246,29 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const currentUserId = user?.id ?? null;
   const [dataOwnerId, setDataOwnerId] = useState<string | null>(currentUserId);
 
+  // State is cleared during render, not in an effect: an effect runs after the
+  // commit, so the new user would see one painted frame of the previous user's
+  // analysis. Adjusting state here makes React re-render before anything paints.
+  if (dataOwnerId !== currentUserId) {
+    setDataOwnerId(currentUserId);
+    setAnalysisData(null);
+    setError(null);
+    setIsLoading(false);
+    // Also clear the repo URL — it is the previous user's input and otherwise
+    // survives a logout, showing up in the next user's navbar.
+    setRepoUrl('');
+  }
+
+  // The network side of the same switch. Refs must not be touched during render,
+  // and aborting after the commit is fine: the data is already gone from state,
+  // and a late response is discarded by the request-id check.
   useEffect(() => {
-    if (dataOwnerId !== currentUserId) {
-      setDataOwnerId(currentUserId);
-      // Abort in-flight network call immediately
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-      // Invalidate any resolving promise
-      activeRequestIdRef.current++;
-      // Clear all analysis data and errors
-      setAnalysisData(null);
-      setError(null);
-      setIsLoading(false);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
-  }, [currentUserId, dataOwnerId]);
+    activeRequestIdRef.current++;
+  }, [currentUserId]);
 
   // Clean up any pending abort controller on unmount
   useEffect(() => {

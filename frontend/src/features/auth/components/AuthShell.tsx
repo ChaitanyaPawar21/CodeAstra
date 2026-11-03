@@ -23,7 +23,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
         </div>
       </main>
 
-      <footer className="py-6 text-center text-xs text-black/50 font-mono">
+      <footer className="py-6 text-center text-xs text-black/60 font-mono">
         CodeAstra © {new Date().getFullYear()}
       </footer>
     </div>
@@ -71,7 +71,7 @@ export function FormError({ message }: { message: string | null }) {
 
 export function OrDivider() {
   return (
-    <div className="flex items-center gap-3 my-5 text-xs text-black/50 font-mono">
+    <div className="flex items-center gap-3 my-5 text-xs text-black/60 font-mono">
       <span className="flex-1 border-t-2 border-black/15" />
       or
       <span className="flex-1 border-t-2 border-black/15" />

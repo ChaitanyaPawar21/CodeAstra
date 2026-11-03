@@ -1,59 +1,37 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FolderTree, Code2, Lightbulb, MessageSquare, Network, Share2, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-// Single source of truth for nav — Navbar reads the same shape for its breadcrumb.
-export const navGroups = [
-  {
-    label: 'Overview',
-    items: [{ name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard }],
-  },
-  {
-    label: 'Explore',
-    items: [
-      { name: 'Repository', path: '/repository', icon: FolderTree },
-      { name: 'Dependency Graph', path: '/graph', icon: Network },
-      { name: 'Architecture', path: '/architecture', icon: Share2 },
-      { name: 'Code Analysis', path: '/code', icon: Code2 },
-    ],
-  },
-  {
-    label: 'AI',
-    items: [
-      { name: 'AI Insights', path: '/insights', icon: Lightbulb },
-      { name: 'AI Chat', path: '/chat', icon: MessageSquare },
-    ],
-  },
-];
+import { navGroups } from './navGroups';
 
 export default function Sidebar() {
   return (
-    <div className="w-60 bg-[#FBF3C4] border-r border-black flex flex-col py-5 h-full shrink-0 relative z-50">
+    <div className="w-16 md:w-60 bg-[#FBF3C4] border-r border-black flex flex-col py-5 h-full shrink-0 relative z-50">
 
       {/* Brand */}
-      <div className="flex items-center gap-3 px-5 mb-7">
+      <div className="flex items-center justify-center md:justify-start gap-3 px-2 md:px-5 mb-7">
         <div className="w-9 h-9 bg-indigo-600 text-black rounded-xl flex items-center justify-center font-bold text-sm shadow-md shadow-indigo-600/20 border border-indigo-400/30">
           CA
         </div>
-        <div className="flex flex-col leading-tight">
+        <div className="hidden md:flex flex-col leading-tight">
           <span className="font-semibold text-sm tracking-tight text-black">CodeAstra</span>
-          <span className="text-[10px] text-black/50 font-mono">Repository Intelligence</span>
+          <span className="text-[10px] text-black/60 font-mono">Repository Intelligence</span>
         </div>
       </div>
 
-      <nav className="flex-1 w-full flex flex-col gap-6 px-3 overflow-y-auto">
+      <nav className="flex-1 w-full flex flex-col gap-6 px-2 md:px-3 overflow-y-auto">
         {navGroups.map((group) => (
           <div key={group.label} className="flex flex-col gap-1">
-            <span className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-black/40">
+            <span className="hidden md:block px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-black/60">
               {group.label}
             </span>
             {group.items.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
+                title={item.name}
                 className={({ isActive }) =>
-                  `relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
-                    isActive ? 'text-black' : 'text-black/50 hover:text-black hover:bg-black/[0.04]'
+                  `relative flex items-center justify-center md:justify-start gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                    isActive ? 'text-black' : 'text-black/60 hover:text-black hover:bg-black/[0.04]'
                   }`
                 }
               >
@@ -68,7 +46,7 @@ export default function Sidebar() {
                       />
                     )}
                     <item.icon className={`w-[18px] h-[18px] relative z-10 shrink-0 ${isActive ? 'text-black' : ''}`} />
-                    <span className="relative z-10 font-medium">{item.name}</span>
+                    <span className="hidden md:inline relative z-10 font-medium">{item.name}</span>
                   </>
                 )}
               </NavLink>
@@ -78,9 +56,9 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto pt-3 px-3 border-t border-black">
-        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-black/50 hover:text-black hover:bg-black/[0.04] transition-colors">
+        <button className="w-full flex items-center justify-center md:justify-start gap-3 px-3 py-2 rounded-lg text-sm text-black/60 hover:text-black hover:bg-black/[0.04] transition-colors">
           <Settings className="w-[18px] h-[18px]" />
-          <span className="font-medium">Settings</span>
+          <span className="hidden md:inline font-medium">Settings</span>
         </button>
       </div>
     </div>
