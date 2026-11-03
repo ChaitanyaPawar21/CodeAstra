@@ -1,4 +1,4 @@
-// frontend/src/shared/api/chat.api.ts
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export interface ChatMessage {
@@ -16,15 +16,28 @@ export async function sendChat(payload: {
 }): Promise<string> {
   const res = await fetch(`${API_URL}/api/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    // If your API uses auth, add: Authorization: `Bearer ${token}`
+
+    // Send the existing authentication cookie
+    credentials: "include",
+
+    headers: {
+      "Content-Type": "application/json",
+    },
+
     body: JSON.stringify({
       ...payload,
-      history: payload.history.map(({ role, content }) => ({ role, content })),
+      history: payload.history.map(({ role, content }) => ({
+        role,
+        content,
+      })),
     }),
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+
+  if (!res.ok) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+
   return data.reply as string;
 }
