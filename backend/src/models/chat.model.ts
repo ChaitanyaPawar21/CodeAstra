@@ -4,8 +4,10 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IChat extends Document {
   userId: mongoose.Types.ObjectId;
   userName: string;
-  question: string;
+  sessionId: string;
+  questions: string[];
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const chatSchema = new Schema<IChat>(
@@ -22,18 +24,20 @@ const chatSchema = new Schema<IChat>(
       trim: true,
     },
 
-    question: {
+    sessionId: {
       type: String,
       required: true,
-      trim: true,
+      unique: true,
     },
 
-    createdAt: {
-      type: Date,
-      default: Date.now,
+    questions: {
+      type: [String],
+      required: true,
+      default: [],
     },
   },
   {
+    timestamps: true,
     versionKey: false,
     collection: "chats",
   }

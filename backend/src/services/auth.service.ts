@@ -1,3 +1,4 @@
+
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -24,7 +25,9 @@ export class AuthError extends Error {
 }
 
 const isDuplicateKeyError = (err: unknown): boolean =>
-  typeof err === "object" && err !== null && (err as { code?: number }).code === 11000;
+  typeof err === "object" &&
+  err !== null &&
+  (err as { code?: number }).code === 11000;
 
 /* -------------------------------------------------------------------------- */
 /*  Cookie helpers (JWT transport)                                            */
@@ -74,12 +77,15 @@ const BCRYPT_ROUNDS = 12;
 export const hashPassword = (plain: string): Promise<string> =>
   bcrypt.hash(plain, BCRYPT_ROUNDS);
 
-export const comparePassword = (plain: string, hash: string): Promise<boolean> =>
-  bcrypt.compare(plain, hash);
+export const comparePassword = (
+  plain: string,
+  hash: string,
+): Promise<boolean> => bcrypt.compare(plain, hash);
 
 // Used to burn the same CPU time when the email doesn't exist, so response
 // timing doesn't reveal which emails are registered.
 let dummyHashPromise: Promise<string> | null = null;
+
 const getDummyHash = (): Promise<string> =>
   (dummyHashPromise ??= hashPassword("codeastra-dummy-password"));
 
@@ -95,26 +101,59 @@ export const generateToken = (userId: string): string =>
   jwt.sign({ userId } satisfies TokenPayload, config.JWT_SECRET, {
     algorithm: "HS256",
     subject: userId,
+    jwtid: crypto.randomUUID(),
     expiresIn: config.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
   });
 
-export const verifyToken = (token: string): { userId: string; issuedAt: number } => {
+export const verifyToken = (
+  token: string,
+): { userId: string; issuedAt: number; sessionId: string } => {
   let decoded: string | jwt.JwtPayload;
+
   try {
-    // Pin the algorithm: never let the token pick its own (alg confusion / "none").
-    decoded = jwt.verify(token, config.JWT_SECRET, { algorithms: ["HS256"] });
+    decoded = jwt.verify(token, config.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
   } catch (err) {
     if (err instanceof jwt.TokenExpiredError) {
-      throw new AuthError("Session expired. Please log in again.", 401, "TOKEN_EXPIRED");
+      throw new AuthError(
+        "Session expired. Please log in again.",
+        401,
+        "TOKEN_EXPIRED",
+      );
     }
-    throw new AuthError("Invalid authentication token.", 401, "INVALID_TOKEN");
+
+    throw new AuthError(
+      "Invalid authentication token.",
+      401,
+      "INVALID_TOKEN",
+    );
   }
 
-  const userId = typeof decoded === "object" ? decoded.userId : undefined;
-  if (typeof userId !== "string" || !mongoose.isValidObjectId(userId)) {
-    throw new AuthError("Invalid authentication token.", 401, "INVALID_TOKEN");
+  const userId =
+    typeof decoded === "object" ? decoded.userId : undefined;
+
+  const sessionId =
+    typeof decoded === "object" ? decoded.jti : undefined;
+
+  if (
+    typeof userId !== "string" ||
+    !mongoose.isValidObjectId(userId) ||
+    typeof sessionId !== "string" ||
+    !sessionId
+  ) {
+    throw new AuthError(
+      "Invalid authentication token.",
+      401,
+      "INVALID_TOKEN",
+    );
   }
-  return { userId, issuedAt: (decoded as jwt.JwtPayload).iat ?? 0 };
+
+  return {
+    userId,
+    issuedAt: (decoded as jwt.JwtPayload).iat ?? 0,
+    sessionId,
+  };
 };
 
 /* -------------------------------------------------------------------------- */
@@ -142,11 +181,16 @@ export const registerUser = async (input: {
   const email = input.email.toLowerCase();
 
   if (await userModel.exists({ email })) {
-    throw new AuthError("An account with this email already exists.", 409, "EMAIL_TAKEN");
+    throw new AuthError(
+      "An account with this email already exists.",
+      409,
+      "EMAIL_TAKEN",
+    );
   }
 
   const password = await hashPassword(input.password);
   let user: IUser;
+
   try {
     user = await userModel.create({
       name: input.name,
@@ -158,11 +202,20 @@ export const registerUser = async (input: {
     // Two simultaneous registrations can both pass the check above; the unique
     // index is the real guarantee.
     if (isDuplicateKeyError(err)) {
-      throw new AuthError("An account with this email already exists.", 409, "EMAIL_TAKEN");
+      throw new AuthError(
+        "An account with this email already exists.",
+        409,
+        "EMAIL_TAKEN",
+      );
     }
+
     throw err;
   }
-  return { user: toAuthUser(user), token: generateToken(String(user._id)) };
+
+  return {
+    user: toAuthUser(user),
+    token: generateToken(String(user._id)),
+  };
 };
 
 export const loginUser = async (input: {
@@ -174,45 +227,84 @@ export const loginUser = async (input: {
     .select("+password");
 
   // Same error for "no such user", "Google-only account" and "wrong password".
-  const invalid = new AuthError("Invalid email or password.", 401, "INVALID_CREDENTIALS");
+  const invalid = new AuthError(
+    "Invalid email or password.",
+    401,
+    "INVALID_CREDENTIALS",
+  );
 
   if (!user || !user.password) {
     await comparePassword(input.password, await getDummyHash());
     throw invalid;
   }
+
   if (!(await comparePassword(input.password, user.password))) {
     throw invalid;
   }
-  return { user: toAuthUser(user), token: generateToken(String(user._id)) };
+
+  return {
+    user: toAuthUser(user),
+    token: generateToken(String(user._id)),
+  };
 };
 
 /** Create a single-use password reset token for an existing local account. */
-export const createPasswordReset = async (email: string): Promise<{ token: string; name: string } | null> => {
-  const user = await userModel.findOne({ email: email.toLowerCase() }).select("+password");
+export const createPasswordReset = async (
+  email: string,
+): Promise<{ token: string; name: string } | null> => {
+  const user = await userModel
+    .findOne({ email: email.toLowerCase() })
+    .select("+password");
+
   // Google-only accounts do not have a password to reset.
   if (!user?.password) return null;
 
   const token = crypto.randomBytes(32).toString("hex");
-  user.passwordResetTokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  user.passwordResetTokenHash = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
   user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
+
   await user.save();
+
   return { token, name: user.name };
 };
 
-export const resetPassword = async (token: string, password: string): Promise<void> => {
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  const user = await userModel.findOne({
-    passwordResetTokenHash: tokenHash,
-    passwordResetExpires: { $gt: new Date() },
-  }).select("+passwordResetTokenHash +passwordResetExpires");
-  if (!user) throw new AuthError("This password reset link is invalid or expired. Request a new one.", 400, "INVALID_RESET_TOKEN");
+export const resetPassword = async (
+  token: string,
+  password: string,
+): Promise<void> => {
+  const tokenHash = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  const user = await userModel
+    .findOne({
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpires: { $gt: new Date() },
+    })
+    .select("+passwordResetTokenHash +passwordResetExpires");
+
+  if (!user) {
+    throw new AuthError(
+      "This password reset link is invalid or expired. Request a new one.",
+      400,
+      "INVALID_RESET_TOKEN",
+    );
+  }
 
   user.password = await hashPassword(password);
   user.passwordResetTokenHash = undefined;
   user.passwordResetExpires = undefined;
+
   // JWT iat has one-second precision; move the cutoff forward so all earlier
   // sessions are rejected, including tokens issued in the same second.
   user.tokensValidAfter = new Date(Date.now() + 1000);
+
   await user.save();
 };
 
@@ -224,13 +316,29 @@ export const getUserForToken = async (
   userId: string,
   issuedAt: number,
 ): Promise<AuthUser> => {
-  const user = await userModel.findById(userId).select("+tokensValidAfter");
+  const user = await userModel
+    .findById(userId)
+    .select("+tokensValidAfter");
+
   if (!user) {
-    throw new AuthError("Account no longer exists.", 401, "USER_NOT_FOUND");
+    throw new AuthError(
+      "Account no longer exists.",
+      401,
+      "USER_NOT_FOUND",
+    );
   }
-  if (user.tokensValidAfter && issuedAt < Math.floor(user.tokensValidAfter.getTime() / 1000)) {
-    throw new AuthError("Session is no longer valid. Please log in again.", 401, "TOKEN_REVOKED");
+
+  if (
+    user.tokensValidAfter &&
+    issuedAt < Math.floor(user.tokensValidAfter.getTime() / 1000)
+  ) {
+    throw new AuthError(
+      "Session is no longer valid. Please log in again.",
+      401,
+      "TOKEN_REVOKED",
+    );
   }
+
   return toAuthUser(user);
 };
 
@@ -260,7 +368,10 @@ export interface GoogleProfileInput {
 export const findOrCreateGoogleUser = async (
   profile: GoogleProfileInput,
 ): Promise<AuthUser> => {
-  const byGoogleId = await userModel.findOne({ googleId: profile.googleId });
+  const byGoogleId = await userModel.findOne({
+    googleId: profile.googleId,
+  });
+
   if (byGoogleId) return toAuthUser(byGoogleId);
 
   if (!profile.email || !profile.emailVerified) {
@@ -270,9 +381,11 @@ export const findOrCreateGoogleUser = async (
       "GOOGLE_EMAIL_UNVERIFIED",
     );
   }
+
   const email = profile.email.toLowerCase();
 
   const byEmail = await userModel.findOne({ email });
+
   if (byEmail) {
     if (byEmail.googleId && byEmail.googleId !== profile.googleId) {
       throw new AuthError(
@@ -281,11 +394,14 @@ export const findOrCreateGoogleUser = async (
         "GOOGLE_ACCOUNT_CONFLICT",
       );
     }
+
     byEmail.googleId = profile.googleId;
     byEmail.provider = "google";
     byEmail.password = undefined; // $unset the local credential
     byEmail.tokensValidAfter = new Date(); // revoke every token issued so far
+
     await byEmail.save();
+
     return toAuthUser(byEmail);
   }
 
@@ -296,13 +412,18 @@ export const findOrCreateGoogleUser = async (
       googleId: profile.googleId,
       provider: "google",
     });
+
     return toAuthUser(created);
   } catch (err) {
     // Concurrent first-time callbacks: the other request won, so reuse its user.
     if (isDuplicateKeyError(err)) {
-      const existing = await userModel.findOne({ $or: [{ googleId: profile.googleId }, { email }] });
+      const existing = await userModel.findOne({
+        $or: [{ googleId: profile.googleId }, { email }],
+      });
+
       if (existing) return toAuthUser(existing);
     }
+
     throw err;
   }
 };
@@ -319,4 +440,5 @@ export const authService = {
   getUserForToken,
   findOrCreateGoogleUser,
 };
+
 export default authService;

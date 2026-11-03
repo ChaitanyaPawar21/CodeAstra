@@ -5,8 +5,7 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-// POST /api/chat
-// Verify authentication before executing the chatbot controller
+// Only authenticated users can access the chatbot.
 router.post("/", authMiddleware, chatController);
 
 export default router;
