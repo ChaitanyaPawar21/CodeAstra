@@ -77,7 +77,6 @@ ${(activeNode.exports ?? []).map((exp) => `export { ${exp} };`).join('\n') || '/
     window.open(`${cleanRepoUrl}/blob/HEAD/${activeFile}`, '_blank', 'noreferrer');
   };
 
-  const lineCount = Math.max(16, fileContent.split('\n').length);
 
   return (
     <div className="h-full flex gap-5 overflow-hidden text-slate-300">
@@ -108,7 +107,7 @@ ${(activeNode.exports ?? []).map((exp) => `export { ${exp} };`).join('\n') || '/
         <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1 font-mono text-xs scrollbar-hide">
           <div className="flex items-center gap-2 px-2.5 py-2 text-slate-200 cursor-pointer bg-black/[0.04] rounded-xl border border-black">
             <ChevronDown className="w-3.5 h-3.5" />
-            <span className="text-indigo-400">📂</span>
+            <span>📂</span>
             <span className="font-semibold text-slate-200">{cleanRepoName}</span>
           </div>
 
@@ -217,15 +216,19 @@ ${(activeNode.exports ?? []).map((exp) => `export { ${exp} };`).join('\n') || '/
 
         {/* Editor Content */}
         <div className="flex-1 overflow-auto bg-[#FBF3C4] p-5 font-mono text-xs leading-relaxed relative">
-          <div className="absolute left-0 top-0 bottom-0 w-12 bg-[#FBF3C4] border-r border-black flex flex-col items-end py-5 pr-3 text-slate-400 select-none text-[11px] font-mono">
-            {Array.from({ length: lineCount }).map((_, i) => (
-              <div key={i}>{i + 1}</div>
+          {/* The number lives in the same row as its line — an absolute gutter
+              column drifts out of sync as soon as a line wraps. */}
+          <div className="pt-1">
+            {fileContent.split('\n').map((line, i) => (
+              <div key={i} className="flex">
+                <span className="w-10 shrink-0 pr-3 text-right text-slate-400 select-none text-[11px] border-r border-black mr-3">
+                  {i + 1}
+                </span>
+                <pre className="flex-1 min-w-0 text-slate-100 whitespace-pre-wrap break-words">
+                  <code>{line || ' '}</code>
+                </pre>
+              </div>
             ))}
-          </div>
-          <div className="pl-14 pt-1">
-            <pre className="text-slate-100 whitespace-pre-wrap break-words">
-              <code>{fileContent}</code>
-            </pre>
           </div>
         </div>
       </motion.div>

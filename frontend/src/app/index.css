@@ -6,8 +6,16 @@
 
 @layer base {
   body {
-    @apply bg-[#FBF3C4] text-slate-900 font-sans antialiased selection:bg-indigo-500/30 selection:text-black;
+    /* NOT text-slate-900: the slate scale is inverted, so slate-900 is #EAEAEA
+       and anything inheriting it (3rd-party chrome like React Flow's controls,
+       which fill their icons with currentColor) renders invisible on #FBF3C4. */
+    @apply bg-[#FBF3C4] text-black font-sans antialiased selection:bg-indigo-500/30 selection:text-black;
   }
+}
+
+/* React Flow hard-codes pale grey chrome that vanishes on the pastel page. */
+.react-flow__attribution a {
+  color: rgba(0, 0, 0, 0.55) !important; /* beats @xyflow/react/dist/style.css, injected after this file */
 }
 
 @layer utilities {
@@ -53,4 +61,5 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-black/10 rounded-full hover:bg-black/20 transition-colors;
 }
+
 

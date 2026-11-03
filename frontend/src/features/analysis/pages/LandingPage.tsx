@@ -126,7 +126,7 @@ export default function LandingPage() {
         </div>
       </main>
 
-      <footer className="py-6 text-center text-xs text-black/50 font-mono">
+      <footer className="py-6 text-center text-xs text-black/60 font-mono">
         CodeAstra © {new Date().getFullYear()}
       </footer>
     </div>

@@ -47,7 +47,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
           {stats.map((s) => (
             <div key={s.label} className="rounded-lg bg-[#FBF3C4] border-2 border-black p-3">
-              <div className="text-[11px] font-mono uppercase text-black/50 mb-0.5">{s.label}</div>
+              <div className="text-[11px] font-mono uppercase text-black/60 mb-0.5">{s.label}</div>
               <div className="text-lg font-bold tracking-tight">{s.value}</div>
             </div>
           ))}

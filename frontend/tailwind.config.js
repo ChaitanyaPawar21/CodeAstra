@@ -34,18 +34,29 @@ export default {
 
         // Inverted to a warm taupe scale so every existing text-/bg-slate-*
         // flips coherently: low numbers = dark ink, high numbers = light.
+        // 50-700 are INK (used as text-*); they must all clear 4.5:1 on the
+        // #FBF3C4 page. 800+ are SURFACES (bg-slate-900 is a pale chip), hence
+        // the jump at 800 — do not "smooth" it or every muted label goes grey.
         slate: {
           50: '#000000',
           100: '#0A0A0A',
           200: '#1A1A1A',
           300: '#2E2E2E',
           400: '#595959', // muted text
-          500: '#808080',
-          600: '#A6A6A6',
-          700: '#C7C7C7',
+          500: '#5E5E5E', // 5.6:1
+          600: '#6B6B6B', // 4.8:1
+          700: '#7D7D7D', // 4.0:1 — chips/dots only
           800: '#DCDCDC',
           900: '#EAEAEA',
           950: '#F5F5F5',
+        },
+
+        // Warm neutral so graph "other" nodes stop reading as cool blue-grey
+        // against the yellow UI.
+        gray: {
+          200: '#F1E9C8',
+          400: '#C9BE92',
+          800: '#3A3422',
         },
 
         // Accent/categorical hues muted to pastels (deep-merged: only the
@@ -63,6 +74,7 @@ export default {
           400: '#8FB89A',
           500: '#6F9E7E',
           600: '#5A8568',
+          700: '#3F6B50', // 5.4:1 — log/status text
         },
         green: {
           400: '#96C08A',
@@ -104,6 +116,7 @@ export default {
           400: '#92AECF',
           500: '#7693BC',
           600: '#5F7BA3',
+          700: '#3C5375', // 6.8:1 — log/status text
         },
         cyan: {
           300: '#A7D0D1',
@@ -114,6 +127,7 @@ export default {
         red: {
           400: '#D68B86',
           500: '#C06A64',
+          700: '#7F3B37', // 7.2:1 — error text
         },
       },
       fontFamily: {

@@ -1,6 +1,134 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FileCode2, Play, Sparkles, FolderTree } from 'lucide-react';
 import { useAnalysis } from '../../analysis/hooks/useAnalysis';
+
+type TreeNode = { name: string; path: string; isFile: boolean; children: Map<string, TreeNode> };
+
+/** What each layer means in plain English — the file's role in the system. */
+const ROLE_BY_LAYER: Record<string, string> = {
+  entry: 'Entry point — boots the app and wires everything together.',
+  route: 'Route definition — maps incoming URLs to handlers.',
+  controller: 'Controller — handles a request and shapes the response.',
+  service: 'Service — business logic, independent of transport.',
+  repository: 'Repository — reads and writes persistent data.',
+  model: 'Data model — defines a schema and its constraints.',
+  middleware: 'Middleware — runs on requests before they reach a handler.',
+  config: 'Configuration — environment and startup settings.',
+  util: 'Utility — shared helpers used across the codebase.',
+  utility: 'Utility — shared helpers used across the codebase.',
+  types: 'Type definitions — shared contracts, no runtime behaviour.',
+  'ui-page': 'UI page — a routed screen the user navigates to.',
+  'ui-component': 'UI component — a reusable piece of interface.',
+  state: 'State management — holds and shares app state.',
+  'api-client': 'API client — talks to the backend over the network.',
+  database: 'Database layer — connection and query handling.',
+  api: 'API surface — exposes endpoints to callers.',
+  test: 'Test — verifies behaviour, not shipped to production.',
+  other: 'Supporting module — no specific architectural layer detected.',
+};
+
+/** Position in the dependency graph, from real fan-in/fan-out. */
+function graphPosition(inCount: number, outCount: number): string {
+  if (inCount === 0 && outCount === 0) return 'Standalone — nothing imports it and it imports nothing.';
+  if (inCount === 0) return `Leaf consumer — imports ${outCount} module${outCount === 1 ? '' : 's'}, imported by none.`;
+  if (outCount === 0) return `Foundation — imported by ${inCount} module${inCount === 1 ? '' : 's'}, depends on none.`;
+  if (inCount >= 5) return `Hub — ${inCount} modules depend on it; changes ripple widely.`;
+  return `Intermediate — imported by ${inCount}, imports ${outCount}.`;
+}
+
+/** Folder tree derived from the full file paths in the dependency graph. */
+function buildTree(paths: string[]): TreeNode {
+  const root: TreeNode = { name: '', path: '', isFile: false, children: new Map() };
+  for (const p of paths) {
+    const parts = p.split('/').filter(Boolean);
+    let cur = root;
+    parts.forEach((part, i) => {
+      let next = cur.children.get(part);
+      if (!next) {
+        next = {
+          name: part,
+          path: parts.slice(0, i + 1).join('/'),
+          isFile: i === parts.length - 1,
+          children: new Map(),
+        };
+        cur.children.set(part, next);
+      }
+      cur = next;
+    });
+  }
+  return root;
+}
+
+/** Folders first, then files, each alphabetical. */
+const sortChildren = (node: TreeNode) =>
+  [...node.children.values()].sort(
+    (a, b) => Number(a.isFile) - Number(b.isFile) || a.name.localeCompare(b.name),
+  );
+
+function TreeRows({
+  node,
+  depth,
+  expanded,
+  onToggle,
+  selected,
+  onSelect,
+}: {
+  node: TreeNode;
+  depth: number;
+  expanded: Set<string>;
+  onToggle: (path: string) => void;
+  selected: string;
+  onSelect: (path: string) => void;
+}) {
+  return (
+    <>
+      {sortChildren(node).map((child) =>
+        child.isFile ? (
+          <div
+            key={child.path}
+            onClick={() => onSelect(child.path)}
+            title={child.path}
+            style={{ paddingLeft: depth * 12 + 12 }}
+            className={`pr-3 py-2 rounded-xl cursor-pointer flex items-center gap-2 font-medium transition-colors ${
+              selected === child.path
+                ? 'text-black bg-indigo-500/10 border border-indigo-500/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-black/[0.04]'
+            }`}
+          >
+            <FileCode2 className="w-4 h-4 shrink-0 text-purple-700" />
+            <span className="truncate">{child.name}</span>
+          </div>
+        ) : (
+          <div key={child.path}>
+            <button
+              type="button"
+              onClick={() => onToggle(child.path)}
+              aria-expanded={expanded.has(child.path)}
+              title={child.path}
+              style={{ paddingLeft: depth * 12 + 12 }}
+              className="w-full pr-3 py-2 text-slate-400 hover:text-slate-200 hover:bg-black/[0.04] rounded-xl cursor-pointer flex items-center gap-2 transition-colors text-left"
+            >
+              <span className="text-slate-500 text-[10px] w-2 shrink-0">
+                {expanded.has(child.path) ? '▼' : '▶'}
+              </span>
+              <span className="truncate">{child.name}</span>
+            </button>
+            {expanded.has(child.path) && (
+              <TreeRows
+                node={child}
+                depth={depth + 1}
+                expanded={expanded}
+                onToggle={onToggle}
+                selected={selected}
+                onSelect={onSelect}
+              />
+            )}
+          </div>
+        ),
+      )}
+    </>
+  );
+}
 
 export default function CodeAnalysisPage() {
   const { analysisData, repoUrl } = useAnalysis();
@@ -8,14 +136,30 @@ export default function CodeAnalysisPage() {
 
   const criticalFiles = analysisData?.criticalFiles ?? [];
   const nodes = analysisData?.dependencyGraph?.nodes ?? [];
-  const folders = analysisData?.folderHierarchy ?? [];
 
   const defaultFileName = criticalFiles[0]?.name || nodes[0]?.label || 'README.md';
   const [selectedFileName, setSelectedFileName] = useState(defaultFileName);
 
+  const tree = useMemo(() => buildTree(nodes.map((n) => n.label).filter(Boolean)), [nodes]);
+
+  // Start with the selected file's ancestors open so it's visible on load.
+  const [expanded, setExpanded] = useState<Set<string>>(() => {
+    const parts = defaultFileName.split('/').slice(0, -1);
+    return new Set(parts.map((_, i) => parts.slice(0, i + 1).join('/')));
+  });
+  const toggle = (path: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+
   const selectedNode = nodes.find((n) => n.label === selectedFileName || n.id === selectedFileName);
   const selectedCritical = criticalFiles.find((c) => c.name === selectedFileName);
   const language = selectedNode?.language || 'Source';
+  // What this file provides to the rest of the codebase.
+  const exportList = selectedNode?.exports ?? [];
 
   const incomingId = selectedNode?.importedBy?.[0];
   const outgoingId = selectedNode?.imports?.[0];
@@ -71,28 +215,18 @@ export default function CodeAnalysisPage() {
           Explorer
         </div>
         <div className="p-3 space-y-1 overflow-y-auto font-mono text-xs">
-          {folders.map((folder) => (
-            <div
-              key={folder.name}
-              className="px-3 py-2 text-slate-400 hover:text-slate-200 hover:bg-black/[0.04] rounded-xl cursor-pointer flex items-center gap-2 transition-colors"
-            >
-              <span className="text-slate-500 text-[10px]">▶</span> {folder.name}
-            </div>
-          ))}
-          {criticalFiles.map((file) => (
-            <div
-              key={file.name}
-              onClick={() => setSelectedFileName(file.name)}
-              className={`px-3 py-2 rounded-xl cursor-pointer flex items-center gap-2 mt-1 font-medium transition-colors ${
-                selectedFileName === file.name
-                  ? 'text-black bg-indigo-500/10 border border-indigo-500/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-black/[0.04]'
-              }`}
-            >
-              <FileCode2 className="w-4 h-4 text-purple-700" />
-              <span className="truncate">{file.name.split('/').pop()}</span>
-            </div>
-          ))}
+          {tree.children.size === 0 ? (
+            <div className="px-3 py-2 text-slate-500 italic">No files analyzed yet</div>
+          ) : (
+            <TreeRows
+              node={tree}
+              depth={0}
+              expanded={expanded}
+              onToggle={toggle}
+              selected={selectedFileName}
+              onSelect={setSelectedFileName}
+            />
+          )}
         </div>
       </div>
 
@@ -108,17 +242,21 @@ export default function CodeAnalysisPage() {
           </div>
 
           <div className="flex-1 p-5 font-mono text-xs overflow-auto relative bg-[#FBF3C4] leading-relaxed">
-            <div className="text-slate-600 select-none absolute left-4 top-5 text-right pr-4 border-r border-black">
-              {Array.from({ length: codeLines.length }).map((_, i) => (
-                <div key={i}>{i + 1}</div>
-              ))}
-            </div>
-            <div className="pl-12 space-y-1">
+            {/* The number lives in the same row as its line. A separate absolute
+                gutter column drifts out of sync the moment a line wraps (or the
+                rows carry spacing the gutter doesn't). */}
+            <div>
               {codeLines.map((line, idx) => {
+                const num = (
+                  <span className="w-8 shrink-0 pr-3 text-right text-slate-400 select-none border-r border-black mr-3">
+                    {idx + 1}
+                  </span>
+                );
                 if (idx === 2) {
                   return (
-                    <div key={idx} className="relative group cursor-pointer">
-                      <span className="text-purple-700">{line}</span>
+                    <div key={idx} className="relative group cursor-pointer flex py-0.5">
+                      {num}
+                      <span className="text-purple-700 break-all">{line}</span>
                       {/* AI Annotation Tooltip */}
                       <div className="absolute right-4 top-0 w-72 p-3.5 bg-[#FFFBE0] border border-indigo-500/30 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 pointer-events-none -translate-y-2 group-hover:translate-y-0">
                         <div className="text-xs text-purple-700 font-semibold mb-1 flex items-center gap-1.5 font-sans">
@@ -134,8 +272,9 @@ export default function CodeAnalysisPage() {
                   );
                 }
                 return (
-                  <div key={idx} className="text-slate-300 break-all">
-                    {line}
+                  <div key={idx} className="flex py-0.5">
+                    {num}
+                    <span className="text-slate-300 break-all whitespace-pre-wrap">{line}</span>
                   </div>
                 );
               })}
@@ -224,6 +363,53 @@ export default function CodeAnalysisPage() {
                 selectedNode?.layerReason ||
                 `Source module categorized under layer '${selectedNode?.type || 'component'}'.`}
             </p>
+          </div>
+
+          <div>
+            <h4 className="text-[11px] font-mono font-bold text-slate-400 mb-2 uppercase tracking-wider">
+              Role
+            </h4>
+            <div className="bg-[#FBF3C4] p-3.5 rounded-xl border border-black space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-black">
+                  {selectedNode?.type || 'unknown'}
+                </span>
+                {language && (
+                  <span className="text-[10px] font-mono text-slate-500">
+                    {language}
+                    {selectedNode?.loc != null && ` · ${selectedNode.loc} LOC`}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {ROLE_BY_LAYER[selectedNode?.type ?? ''] ?? ROLE_BY_LAYER.other}
+              </p>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {graphPosition(
+                  selectedNode?.importedBy?.length ?? 0,
+                  selectedNode?.imports?.length ?? 0,
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-[11px] font-mono font-bold text-slate-400 mb-2 uppercase tracking-wider">
+              Features
+            </h4>
+            <ul className="text-xs font-mono text-black space-y-1.5 bg-[#FBF3C4] p-3.5 rounded-xl border border-black max-h-40 overflow-y-auto">
+              {exportList.length > 0 ? (
+                exportList.map((exp) => (
+                  <li key={exp} className="truncate" title={exp}>
+                    • {exp}
+                  </li>
+                ))
+              ) : (
+                <li className="text-slate-500 italic">
+                  • No exports detected — this file runs for its side effects
+                </li>
+              )}
+            </ul>
           </div>
 
           <div>
