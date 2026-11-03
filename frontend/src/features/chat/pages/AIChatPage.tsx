@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { useAnalysis } from '../../analysis/hooks/useAnalysis';
