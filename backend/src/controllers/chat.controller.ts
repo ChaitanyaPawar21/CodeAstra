@@ -1,10 +1,16 @@
-
 import type { Request, Response } from "express";
-import { askRepoAssistant } from "../services/chat.service.js";
-import type { ChatMessage } from "../services/chat.service.js";
-import Chat from "../models/chat.model.js";
+import mongoose from "mongoose";
 
-export const chatController = async (req: Request, res: Response) => {
+import Chat from "../models/chat.model.js";
+import {
+  askRepoAssistant,
+  type ChatMessage,
+} from "../services/chat.service.js";
+
+export const chatController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
     const {
       message,
@@ -16,45 +22,62 @@ export const chatController = async (req: Request, res: Response) => {
 
     // Validate the user's question.
     if (typeof message !== "string" || !message.trim()) {
-      return res.status(400).json({
+      res.status(400).json({
         error: "Message is required",
       });
+      return;
     }
 
-    // Get authenticated user information.
+    // Ensure the request has an authenticated user.
     const user = req.user;
 
     if (!user) {
-      return res.status(401).json({
+      res.status(401).json({
         error: "Authentication required",
       });
+      return;
     }
 
-    // Get the verified login session ID from auth middleware.
-    const sessionId = res.locals.chatSessionId;
+    // Get the session ID set by authMiddleware.
+    const sessionId = res.locals.chatSessionId as
+      | string
+      | undefined;
 
-    if (typeof sessionId !== "string" || !sessionId) {
-      return res.status(401).json({
-        error: "Invalid login session",
+    if (!sessionId) {
+      res.status(401).json({
+        error: "Invalid chat session. Please log in again.",
       });
+      return;
     }
-
-    const userId = user.id;
-    const userName = user.name;
 
     const question = message.trim().slice(0, 2000);
 
-    // Save the question in the document belonging to this login session.
-    // If the document does not exist, MongoDB creates it.
+    // Accept only valid conversation history messages.
+    const safeHistory: ChatMessage[] = Array.isArray(history)
+      ? history
+          .filter(
+            (m: any) =>
+              (m?.role === "user" || m?.role === "assistant") &&
+              typeof m?.content === "string",
+          )
+          .slice(-4)
+          .map((m: any) => ({
+            role: m.role,
+            content: m.content.slice(0, 1000),
+          }))
+      : [];
+
+    // Save the user's question in their current login session.
+    // AI responses are deliberately NOT stored.
     await Chat.findOneAndUpdate(
       {
-        userId,
+        userId: new mongoose.Types.ObjectId(user.id),
         sessionId,
       },
       {
         $setOnInsert: {
-          userId,
-          userName,
+          userId: new mongoose.Types.ObjectId(user.id),
+          userName: user.name,
           sessionId,
         },
         $push: {
@@ -65,19 +88,10 @@ export const chatController = async (req: Request, res: Response) => {
         upsert: true,
         new: true,
         runValidators: true,
-      }
+      },
     );
 
-    // Keep only valid chat history messages for the AI.
-    const safeHistory: ChatMessage[] = Array.isArray(history)
-      ? history.filter(
-          (m: any) =>
-            (m?.role === "user" || m?.role === "assistant") &&
-            typeof m?.content === "string"
-        )
-      : [];
-
-    // Generate the AI response.
+    // Generate the AI response using the existing chatbot service.
     const reply = await askRepoAssistant({
       message: question,
       history: safeHistory,
@@ -86,17 +100,15 @@ export const chatController = async (req: Request, res: Response) => {
       analysis,
     });
 
-    // Return the AI response without saving it in MongoDB.
-    return res.json({ reply });
+    // Return the AI response without saving it to MongoDB.
+    res.json({ reply });
+  } catch (err) {
+    const error = err as Error;
 
-  } catch (err: unknown) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Chat failed";
+    console.error("[chat] error:", error.message);
 
-    console.error("[chat] error:", errorMessage);
-
-    return res.status(500).json({
-      error: errorMessage,
+    res.status(500).json({
+      error: error.message || "Chat failed",
     });
   }
 };

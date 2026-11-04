@@ -1,6 +1,4 @@
-
 import type { NextFunction, Request, Response } from "express";
-
 import {
   AUTH_COOKIE_NAME,
   AuthError,
@@ -8,6 +6,7 @@ import {
   verifyToken,
 } from "../services/auth.service.js";
 
+/** Extract JWT from cookie first, then Authorization header. */
 const extractToken = (req: Request): string | null => {
   const cookieToken = (
     req.cookies as Record<string, string> | undefined
@@ -25,6 +24,7 @@ const extractToken = (req: Request): string | null => {
   return null;
 };
 
+/** Authenticate the user and attach their login session ID. */
 export const authMiddleware = async (
   req: Request,
   res: Response,
@@ -41,13 +41,13 @@ export const authMiddleware = async (
       );
     }
 
-    // Verify the JWT and extract the login session ID.
     const { userId, issuedAt, sessionId } = verifyToken(token);
 
-    // Retrieve the authenticated user.
-    req.user = await getUserForToken(userId, issuedAt);
+    const user = await getUserForToken(userId, issuedAt);
 
-    // Make the verified session ID available to the chat controller.
+    req.user = user;
+
+    // This ID remains the same while the JWT remains the same.
     res.locals.chatSessionId = sessionId;
 
     next();
