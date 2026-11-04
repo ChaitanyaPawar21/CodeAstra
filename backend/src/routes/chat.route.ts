@@ -1,10 +1,10 @@
-// backend/src/routes/chat.route.ts
 import { Router } from "express";
 import { chatController } from "../controllers/chat.controller.js";
-
+import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-router.post("/", chatController); // POST /api/chat
+// Authenticate the user before processing chat requests.
+router.post("/", authMiddleware, chatController);
 
 export default router;

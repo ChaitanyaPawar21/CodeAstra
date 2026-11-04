@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { useAnalysis } from '../../analysis/hooks/useAnalysis';
-import { sendChat } from '../../../shared/api/chat.api';
+import { sendChat } from '../../chat/services/chat.api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
